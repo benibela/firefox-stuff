@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name           sxrupel
 // @namespace      benibela
-// @include        http://www.oberhoschi.com/skrupel/inhalt/flotte.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/flotte_alpha.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/flotte_beta.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/flotte_gamma.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/flotte_delta.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/planeten_gamma.php?fu=4*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/galaxie.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/uebersicht_kolonien.php*
-// @include        http://www.oberhoschi.com/skrupel/inhalt/meta_simulation.php*          
+// @include        http://*/skrupel/inhalt/flotte.php*
+// @include        http://*/skrupel/inhalt/flotte_alpha.php*
+// @include        http://*/skrupel/inhalt/flotte_beta.php*
+// @include        http://*/skrupel/inhalt/flotte_gamma.php*
+// @include        http://*/skrupel/inhalt/flotte_delta.php*
+// @include        http://*/skrupel/inhalt/planeten_gamma.php?fu=4*
+// @include        http://*/skrupel/inhalt/galaxie.php*
+// @include        http://*/skrupel/inhalt/uebersicht_kolonien.php*
+// @include        http://*/skrupel/inhalt/meta_simulation.php*          
 // @include        http://*/skrupel/inhalt/flotte_alpha.php*
 // @include        http://*/skrupel/inhalt/flotte_beta.php*
 // @include        http://*/skrupel/inhalt/flotte_gamma.php*
@@ -238,7 +238,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
     
     var imgs = document.getElementsByTagName("img");
     var shipId = 0;
-    for (var i=0;i<imgs.length;i++) {http://www.oberhoschi.com/skrupel/bilder/icons/erf_2.gif
+    for (var i=0;i<imgs.length;i++) {
       if (imgs[i].height == 80 && imgs[i].parentNode.nodeName == "A") {
         shipId = /shid=([0-9]+)/.exec(imgs[i].parentNode.href)[1];
         glob.shipNames[shipId] = /\[([^\]]+)\]/.exec(imgs[i].title)[1];
