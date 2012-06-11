@@ -113,6 +113,26 @@ window.submitForShips = function (flotte, form, callback){
 //Skrupel utilities
 window.gameSId = function(){ return (/&sid=([^&]+)/.exec(window.location)[1]); }; //TODO: Use gameSId() instead of gameSId later
 
+
+
+localStorageGetShipData = function(id) {
+  var details = localStorage["Ship:"+id];
+  if (details) details = eval(details);
+  return details;
+}
+
+localStorageSetShipData = function(id, ship) {
+  localStorage["Ship:"+id] = ship.toSource();
+}
+
+localStorageSetShipDataProperty = function(id, name, value) {
+  var old = localStorageGetShipData(id);
+  if (!old) old = {};
+  old[name] = value;
+  localStorageSetShipData(id, old);
+  //alert(localStorageGetShipData(id).toSource());
+}
+
 //window.getShipId() = function(s) { return (/shid=([0-9]+)/.exec(s)[1];)
 
 window.dominantSpeciesQuality = new Object();
@@ -183,7 +203,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
     //use
     for (var i=0;i<planets.length;i++) {
      // for (var j in planets[i]) alert(j+": "+planets[i][j].textContent);
-      var name = gameSId + ":" + planets[i]["Name"].textContent;
+      var name = gameSId() + ":" + planets[i]["Name"].textContent;
       localStorage["Planet:"+name+":Temperatur"] = planets[i]["Temperatur"].textContent;
       if (planets[i]["dom.Spezies"]) {
         var dsName = /^[^ ]+/.exec(planets[i]["dom.Spezies"].textContent);
@@ -237,11 +257,24 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
     glob.shipNames = new Object();
     
     var imgs = document.getElementsByTagName("img");
-    var shipId = 0;
+    var shipId = 0; var shipData = null;
     for (var i=0;i<imgs.length;i++) {
       if (imgs[i].height == 80 && imgs[i].parentNode.nodeName == "A") {
         shipId = /shid=([0-9]+)/.exec(imgs[i].parentNode.href)[1];
         glob.shipNames[shipId] = /\[([^\]]+)\]/.exec(imgs[i].title)[1];
+        imgs[i].width = 0.50*122;
+        imgs[i].height = 0.50*80;
+        
+       // alert(shipId);
+       // alert(localStorageGetShipData);
+        //alert(localStorageGetShipData(shipId).mission);
+        
+        shipData = localStorageGetShipData(shipId);
+        if (shipData) {
+          var extra = document.createElement("div");
+          extra.innerHTML = "Mission: " + shipData.mission;
+          imgs[i].parentNode.appendChild(extra);
+        }
       } else if ((imgs[i].width == 15 && imgs[i].height == 15 && imgs[i].src.contains("schiff_aktiv")) || 
                (imgs[i].width == 22 && imgs[i].height == 22 && imgs[i].src.contains("icons/erf"))) {
         var cb = document.createElement("INPUT"); 
@@ -391,9 +424,41 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     }
     
     
-    var flotte = globals().meta_flotte;
-    if (flotte.length == 0 || !globals().meta_flotte_enabled) return;
+    var firstTextNode = function(e) { 
+      if (e.nodeType == Node.TEXT_NODE && e.textContent.trim() != "" ) return e.textContent.trim(); 
+      for (var i=0;i<e.childNodes.length;i++) {
+        var t = firstTextNode(e.childNodes[i]); 
+        if (t!="") return t;
+      } 
+      return "";
+    }
+    var getMissionSummary = function (page) {
+      var inps = page.getElementsByTagName("input");
+      var found = false;
+      var add = "";
+      var prev = "0";
+      $(page).find("input:checked").each(function(i,e){
+        if (e.type == "checkbox" && e.name == "betamodus" && (prev == 4 || prev == 6)) { add += " (auto)"; return; }
+        var name = firstTextNode(e.parentNode.parentNode);
+        if (e.value == 0) add += "<span style='color: #777777'>"+name+"</span>";
+        else add += name;
+        if (e.value == 21) add += " auf "+$(e.parentNode.parentNode).find('*[name="traktor_id"] option[selected]').get(0).textContent;
+        prev = e.value;
+      });
+      return add;
+    }
     
+    
+    var flotte = globals().meta_flotte;
+    if (flotte.length == 0 || !globals().meta_flotte_enabled) {
+      var submit = document.getElementsByName("bla")[0];
+      var oldclick = submit.onclick;
+      submit.onclick =  function(){
+        var shipId = /shid=([0-9]+)/.exec(document.forms[0].action)[1];  
+        localStorageSetShipDataProperty(shipId, "mission", getMissionSummary(document.body));
+      }
+      return;
+    }    
     var displayUpdatedMission = function(id){return function(x){
         document.body.innerHTML = document.body.innerHTML + globals().shipNames[id] + ":" + (/<center>(.*)<\/center>/.exec(x)[1]) + "<br>";
         }};
@@ -403,7 +468,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     submit.value = "Flotten Spezialmission aktivieren";
     submit.type = "button";
     submit.onclick = function(){      
+      var pretty = getMissionSummary(document.body);
       submitForShips(flotte, document.forms[0], function(id,res){
+        localStorageSetShipDataProperty(id, "mission", pretty);
         displayUpdatedMission(id)(res);
       });
     }
@@ -416,34 +483,15 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 
     var submitb = document.createElement("input"); submitb.type="button";
     submitb.value = "Alle zeigen";
-    submitb.onclick = function(){
-      var firstTextNode = function(e) { 
-        if (e.nodeType == Node.TEXT_NODE && e.textContent.trim() != "" ) return e.textContent.trim(); 
-        for (var i=0;i<e.childNodes.length;i++) {
-          var t = firstTextNode(e.childNodes[i]); 
-          if (t!="") return t;
-        } 
-        return "";
-      }
-      
+    submitb.onclick = function(){      
       document.body.innerHTML = "";
       for (var i=0;i<flotte.length;i++)
         skrupelrequest("flotte_alpha.php?fu=3&shid="+flotte[i], "", (function(id){return function(data){
           var temp = document.createElement("div");
           temp.innerHTML = data;
-          var inps = temp.getElementsByTagName("input");
-          var found = false;
-          var add = globals().shipNames[id]+": ";
-          var prev = "0";
-          $(temp).find("input:checked").each(function(i,e){
-            if (e.type == "checkbox" && e.name == "betamodus" && (prev == 4 || prev == 6)) { add += " (auto)"; return; }
-            var name = firstTextNode(e.parentNode.parentNode);
-            if (e.value == 0) add += "<span style='color: #777777'>"+name+"</span>";
-            else add += name;
-            if (e.value == 21) add += " auf "+$(e.parentNode.parentNode).find('*[name="traktor_id"] option[selected]').get(0).textContent;
-            prev = e.value;
-          });
-          document.body.innerHTML += add + "<br>";
+          var pretty = getMissionSummary(temp);
+          document.body.innerHTML += globals().shipNames[id] + +": "+pretty + "<br>";          
+          localStorageSetShipDataProperty(id, "mission", pretty);
         }})(flotte[i]));
     };
     appendButton(submitb);
@@ -455,6 +503,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       var splitted = /(.*shid=)[0-9]+(&.*)/.exec(form.action);
       document.body.innerHTML = "";
       for (var i=0;i+1<flotte.length;i+=2){
+        localStorageSetShipDataProperty(flotte[i], "mission", "Traktorstrahl auf "+globals().shipNames[flotte[i+1]]);
+        localStorageSetShipDataProperty(flotte[i+1], "mission", "<span style='color: #777777'>keine</span>");
         request(splitted[1] + flotte[i] + splitted[2], 
                 "aktion=21&traktor_id="+flotte[i+1]+"&begleitschutz=&schiff_id=0&warpfaktor=1&bla=Spezialmission aktivieren",  
                 displayUpdatedMission(flotte[i]));      
@@ -803,8 +853,10 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     window.tooltipunbesetzt = function(xdat,ydat,name,beziehung) {
       if(settings.enabletooltips) {        
         oldtooltipunbesetzt(xdat,ydat,name,beziehung);
-        var realname = "Planet:"+ gameSId + ":" + /\[([^\]]+)\]/.exec(name)[1];
+        var realname = "Planet:"+ gameSId() + ":" + /\[([^\]]+)\]/.exec(name)[1];
+//        alert(realname);
         if (localStorage[realname+":Temperatur"]){
+          document.getElementById("tooltip_planetunbesetzt_temperatur").style.display = "";
           document.getElementById("tooltip_planetunbesetzt_temperatur").textContent = localStorage[realname+":Temperatur"];
           if (localStorage[realname+":dsCount"] > 0) {
             document.getElementById("tooltip_planetunbesetzt_trDS").style.display = "";
@@ -822,6 +874,10 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             document.getElementById("tooltip_planetunbesetzt_Fabriken").textContent = details["Fabriken"];
             document.getElementById("tooltip_planetunbesetzt_PDS").textContent = details["P.D.S"];
            } else document.getElementById("tooltip_planetunbesetzt_trWirtschaft").style.display = "none";
+        } else {
+          document.getElementById("tooltip_planetunbesetzt_temperatur").style.display = "none";
+          document.getElementById("tooltip_planetunbesetzt_trDS").style.display = "none";
+          document.getElementById("tooltip_planetunbesetzt_trWirtschaft").style.display = "none";
         }
 
       }
