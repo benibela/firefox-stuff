@@ -14,6 +14,7 @@
 // @include        http://*/skrupel/inhalt/flotte_beta.php*
 // @include        http://*/skrupel/inhalt/flotte_gamma.php*
 // @include        http://*/skrupel/inhalt/flotte_delta.php*
+// @include        http://*/skrupel/inhalt/menu.php?fu=1*
 // ==/UserScript==
 
 function libraryinit(){
@@ -107,6 +108,10 @@ window.submitForShips = function (flotte, form, callback){
   for (var i=0;i<flotte.length;i++)
     request(splitted[1] + flotte[i] + splitted[2], data, bindCallbackWrapper(flotte[i]));  
 }
+
+window.submitResultDefaultDisplay = function(id, x){
+  document.body.innerHTML = document.body.innerHTML + globals().shipNames[id] + ":" + (/<center>(.*)<\/center>/.exec(x)[1]) + "<br>";
+};
 
 
 /////////////////////////////////////////////////////////////////
@@ -459,9 +464,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       }
       return;
     }    
-    var displayUpdatedMission = function(id){return function(x){
-        document.body.innerHTML = document.body.innerHTML + globals().shipNames[id] + ":" + (/<center>(.*)<\/center>/.exec(x)[1]) + "<br>";
-        }};
+    
+    var displayUpdatedMission = function(id){return function(x) { submitResultDefaultDisplay(id, x); }; };
     
     var submit = document.getElementsByName("bla")[0];
     var blavalue = submit.value;
@@ -471,7 +475,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       var pretty = getMissionSummary(document.body);
       submitForShips(flotte, document.forms[0], function(id,res){
         localStorageSetShipDataProperty(id, "mission", pretty);
-        displayUpdatedMission(id)(res);
+        submitResultDefaultDisplay(id, res);
       });
     }
 
@@ -490,7 +494,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
           var temp = document.createElement("div");
           temp.innerHTML = data;
           var pretty = getMissionSummary(temp);
-          document.body.innerHTML += globals().shipNames[id] + +": "+pretty + "<br>";          
+          document.body.innerHTML += globals().shipNames[id]  +": "+pretty + "<br>";          
           localStorageSetShipDataProperty(id, "mission", pretty);
         }})(flotte[i]));
     };
@@ -742,6 +746,54 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       
     };
   }
+} else if (window.location.toString().contains("flotte_delta.php?fu=5")) {
+  ///////////////////////////////////////////////////////////////////
+  //FLOTTEN SCHIFF VERWALTUNGS OPTIONEN
+  ///////////////////////////////////////////////////////////////////
+  skrupelhack = function (){ 
+    var opts = document.getElementsByTagName("option");
+    var ordner = {};
+    for (var i=0;i<opts.length;i++)
+      if (opts[i].value != "0") ordner[opts[i].value] = opts[i].textContent;
+    localStorage["Ordner:"+gameSId()] = ordner.toSource();
+
+    var flotte = globals().meta_flotte;
+    if (flotte.length == 0 || !globals().meta_flotte_enabled) return;
+   
+
+    var inps = document.getElementsByTagName("input");
+    var last = null;
+    for (var i=inps.length-1; i >= 0; i--)
+      if (inps[i].type == "submit") { last = inps[i]; break; }
+    last.value = "F. verschieben";    
+    last.type = "button"
+    last.onclick = function(){
+      submitForShips(flotte, document.forms[1], submitResultDefaultDisplay);
+    }    
+  }
+  
+} else if (window.location.toString().contains("menu.php?fu=1")) {
+  ///////////////////////////////////////////////////////////////////
+  //FLOTTEN SCHIFF VERWALTUNGS OPTIONEN
+  ///////////////////////////////////////////////////////////////////
+  skrupelhack = function (){ 
+    var sid = gameSId();
+    var ordner = localStorage["Ordner:"+sid];
+    if (!ordner || ordner == "") return;
+    ordner = eval(ordner);
+
+    var ships = document.getElementsByTagName("a")[3];
+    var splitted = /(.*flotte[.]php[?]fu=1)(&.*)/.exec(ships.onclick);
+//alert(ships.onclick+"=>"+splitted);
+    var links = "";
+    for (var o in ordner) 
+      links += "<a onclick='"+splitted[1]+"&oid="+o+splitted[2]+"'>"+ordner[o]+"</a><br>";
+    var temp = document.createElement("div");
+    temp.innerHTML = links;
+
+    ships.parentNode.appendChild(temp);   
+  }
+  
 } else if (window.location.toString().contains("flotte_gamma.php?fu=2")) {
   ///////////////////////////////////////////////////////////////////
   //TAKTIK
