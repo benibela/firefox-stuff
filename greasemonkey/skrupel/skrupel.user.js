@@ -15,6 +15,8 @@
 // @include        http://*/skrupel/inhalt/flotte_gamma.php*
 // @include        http://*/skrupel/inhalt/flotte_delta.php*
 // @include        http://*/skrupel/inhalt/menu.php?fu=1*
+// @include        http://*/skrupel/inhalt/meta.php?fu=1*
+// @include        http://*/skrupel/inhalt/meta_rassen.php?fu=1*
 // ==/UserScript==
 
 function libraryinit(){
@@ -774,15 +776,22 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   
 } else if (window.location.toString().contains("menu.php?fu=1")) {
   ///////////////////////////////////////////////////////////////////
-  //FLOTTEN SCHIFF VERWALTUNGS OPTIONEN
+  //MENU
   ///////////////////////////////////////////////////////////////////
   skrupelhack = function (){ 
+    var links = document.getElementsByTagName("a");
+   // alert(links[2].onclick);
+   // alert(links[2].onclick.toSource().replace( /link_unten/, "link_all"));
+//  links[2].onclick = links[2].getAttribute("onclick").replace( /link_unten/, "link_all");
+    //    var changedLink = eval(links[2].onclick.toSource().replace( /link_unten/, "link_all"));
+  //  links[2].onclick = function(e){alert(changedLink); changedLink(e);};
+
     var sid = gameSId();
     var ordner = localStorage["Ordner:"+sid];
     if (!ordner || ordner == "") return;
     ordner = eval(ordner);
 
-    var ships = document.getElementsByTagName("a")[3];
+    var ships = links[3];
     var splitted = /(.*flotte[.]php[?]fu=1)(&.*)/.exec(ships.onclick);
 //alert(ships.onclick+"=>"+splitted);
     var links = "";
@@ -794,6 +803,20 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     ships.parentNode.appendChild(temp);   
   }
   
+} else if (window.location.toString().contains("meta.php?fu=1") || window.location.toString().contains("meta_rassen.php?fu=1")) {
+  ///////////////////////////////////////////////////////////////////
+  //META MENU
+  ///////////////////////////////////////////////////////////////////
+  skrupelhack = function (){ 
+    window.metalink = function(url) { 
+      if (parent.mittelinksoben.document.globals.map.value==1) {
+        window.open(url);
+      }  else  {
+        parent.mittemitte.rahmen12.window.location=url;
+      }    
+    }
+    window.link = window.metalink; // for rassen
+  }
 } else if (window.location.toString().contains("flotte_gamma.php?fu=2")) {
   ///////////////////////////////////////////////////////////////////
   //TAKTIK
