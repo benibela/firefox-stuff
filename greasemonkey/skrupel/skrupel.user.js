@@ -352,8 +352,25 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     center.insertBefore(meta, center.firstChild);
     center.style.whiteSpace="nowrap";
     
+    var flotte = parent.mittelinksoben.document.getElementById("globals").meta_flotte;
+    var totalCount = 0;
     
-    
+    var as = document.getElementsByTagName("a");
+    for (var i=0;i<as.length;i++){
+      var ordner = /.*flotte.php[?]fu=1.*oid=([0-9]+).*/.exec(as[i].href);
+      if (!ordner) break;
+      var btn = bbCreateElementWithClick("input", (function(oid){return function(){
+        for (var i=0;i<flotte.length;i++)
+          skrupelrequest("flotte_delta.php?fu=7&shid="+flotte[i], "oid="+oid, function(){
+            totalCount++; 
+            if (totalCount == flotte.length)
+              location.reload();
+          });
+        
+      }})(ordner[1]),
+      {type: "button", value: "verschieben", style: "display: block; margin-top: 20px"});
+      as[i].parentNode.appendChild(btn);
+    }
   }
 } else if (window.location.toString().contains("flotte.php?fu=3")) {
   /////////////////////////////////////////////////////////////////////
