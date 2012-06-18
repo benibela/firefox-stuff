@@ -1168,9 +1168,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 
 if (skrupelhack) {
   var injectJS = document.createElement("script");
-  injectJS.innerHTML = libraryinit.toSource() + 
-                       "var skrupelhack = "+skrupelhack.toSource()+";"+
-                       "libraryinit(); " + // " window.setTimeout = function(a,b){alert('timeout.'+a+':'+b);}; window.setInterval = function(a,b){alert('interval.'+a+':'+b);};"
+  var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
+  injectJS.innerHTML = ( is_chrome ? libraryinit : libraryinit.toSource()) + 
+                        "var skrupelhack = "+ ( is_chrome ? skrupelhack : skrupelhack.toSource() )+";"+                       "libraryinit(); " + // " window.setTimeout = function(a,b){alert('timeout.'+a+':'+b);}; window.setInterval = function(a,b){alert('interval.'+a+':'+b);};"
                        "skrupelhack(); " ;
   var jq = document.createElement("script");
   jq.type="text/javascript";
