@@ -10,10 +10,6 @@
 // @include        http://*/skrupel/inhalt/galaxie.php*
 // @include        http://*/skrupel/inhalt/uebersicht_kolonien.php*
 // @include        http://*/skrupel/inhalt/meta_simulation.php*          
-// @include        http://*/skrupel/inhalt/flotte_alpha.php*
-// @include        http://*/skrupel/inhalt/flotte_beta.php*
-// @include        http://*/skrupel/inhalt/flotte_gamma.php*
-// @include        http://*/skrupel/inhalt/flotte_delta.php*
 // @include        http://*/skrupel/inhalt/menu.php?fu=1*
 // @include        http://*/skrupel/inhalt/meta.php?fu=1*
 // @include        http://*/skrupel/inhalt/meta_rassen.php?fu=1*
@@ -165,6 +161,8 @@ window.dominantSpeciesQualityColor = function(name){
 window.globals = function (){
   if (parent.mittelinksoben) return parent.mittelinksoben.document.getElementById("globals");
   if (parent.parent.mittelinksoben) return parent.parent.mittelinksoben.document.getElementById("globals");
+  if (parent.parent.parent.mittelinksoben) return parent.parent.parent.mittelinksoben.document.getElementById("globals"); //mineral scan, eingebunden in detail scan
+  if (parent.parent.parent.parent.mittelinksoben) return parent.parent.parent.parent.mittelinksoben.document.getElementById("globals"); //mineral scan in automatischer (dieses skript) detail scan
   alert("ups");
 }
 
@@ -177,7 +175,7 @@ libraryinit();
 
 var skrupelhack = null;
 
-if (window.location.toString().contains("flotte_beta.php?fu=1")) {
+if (window.location.toString().contains("flotte_beta.php?fu=1&")) {
   ///////////////////////////////////////////////////////////////////
   //SCAN
   ///////////////////////////////////////////////////////////////////
@@ -187,6 +185,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
     var tds = document.getElementsByTagName("td");
     var inPlanet = false; 
     var planetInfos; var lastName; var value;
+    var sid = gameSId();
     for (var i=0;i<tds.length;i++) {
       if (tds[i].firstChild && ((tds[i].firstChild.nodeType == 3 && tds[i].childNodes.length == 1) || (inPlanet && tds[i].firstChild.nodeType == 1 && tds[i].firstChild.nodeName == "A"))) {
         if (tds[i].textContent == "Name") { 
@@ -202,8 +201,17 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
         var temp = /pid=([0-9]+)/.exec(tds[i].firstChild.action);
         if (temp) { //temp == null, für schiffe
           planetInfos["pid"] = temp[1];
-        }
-      }
+          
+          var lsname = gameSId() + ":" + planetInfos["Name"].textContent;
+          if (!localStorage["Planet:" + lsname+":DETAILMINERALDENSITY"]) {
+            var ifr = document.createElement("iframe");
+            ifr.src = tds[i].firstChild.action;
+            //ifr.onload = (function(btn){ btn.style.color = "#00FF00"; })(tds[i].firstChild.elements[0]);
+            ifr.style.display="none";
+            tds[i].firstChild.elements[0].parentNode.appendChild(ifr);
+          } else tds[i].firstChild.elements[0].style.color = "#000000";
+        } 
+      } 
     }
     if (inPlanet) {planets.push(planetInfos); inPlanet = false; }
     
@@ -250,8 +258,47 @@ if (window.location.toString().contains("flotte_beta.php?fu=1")) {
     for (var p in infos) { infos[p] = infos[p].textContent;}
     var pid = /pid=([0-9]+)/.exec(location.href)[1];
     var name = globals()["PLANETEN:"+pid];
-    //alert(pid);
     localStorage["Planet:"+name+":DETAILWIRTSCHAFT"] = infos.toSource();    
+  }
+} else if (window.location.toString().contains("flotte_beta.php?fu=10")) {
+  ///////////////////////////////////////////////////////////////////
+  //DETAIL MINERAL SCAN
+  ///////////////////////////////////////////////////////////////////
+  skrupelhack = function (){
+
+    var colors = ["rgb(0, 241, 74)", "rgb(255, 222, 202)", "rgb(233, 5, 5)", "rgb(0, 133, 239)"];
+    var count = [0,0,0,0];
+    var density = [-1,-1,-1,-1];
+    var dots = document.getElementsByTagName("div");
+    var last = ""; var lastid = ""; var kind = -1;
+    for (var i=0;i<dots.length;i++)
+      if (dots[i].style.position == "absolute") {
+        var bc = dots[i].style.backgroundColor;
+        if (bc != last) {
+          last = bc; 
+          kind = colors.indexOf(bc);
+        }
+        if (density[kind] == -1 && dots[i].id[2] == "0" && dots[i].id != "p_0_0") {
+          if (dots[i].id == "p_0") density[kind] = 1;
+          else if (dots[i].id.length == 6) density[kind] = 5;
+          else density[kind] = dots[i].id[4] / 2;
+        }
+        lastid = dots[i].id;
+        count[kind] = count[kind] + 1;
+      }
+      
+      
+    var pid = /pid=([0-9]+)/.exec(location.href)[1];
+    var name = globals()["PLANETEN:"+pid];
+    //alert(pid);
+    localStorage["Planet:"+name+":DETAILMINERALPOINTS"] = count.toSource();
+    localStorage["Planet:"+name+":DETAILMINERALDENSITY"] = density.toSource();
+    
+
+    if (window.parent && window.parent.frameElement && window.parent.frameElement.parentNode) 
+      window.parent.frameElement.parentNode.getElementsByTagName("input")[0].style.color="#00FF00";
+    
+    //alert(count + " <> "+density);
   }
 } else if (window.location.toString().contains("flotte.php?fu=6") || window.location.toString().contains("flotte.php?fu=1")) {
   ////////////////////////////////////////////////////////////////////////
@@ -935,6 +982,12 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             "<tr><td>Temperatur</td><td id='tooltip_planetunbesetzt_temperatur'></td></tr>"+
             "<tr id='tooltip_planetunbesetzt_trDS'><td>dom.Spezies</td><td><span id='tooltip_planetunbesetzt_dsName'></span><i id='tooltip_planetunbesetzt_dsCount'></i></td></tr>"+
             "<tr id='tooltip_planetunbesetzt_trWirtschaft'><td colspan=2>   <img src='../bilder/icons/crew.gif'><span id='tooltip_planetunbesetzt_Kolonisten'></span>    <img src='../bilder/icons/minen.gif'><span id='tooltip_planetunbesetzt_Minen'></span>   <img src='../bilder/icons/fabrik.gif'><span id='tooltip_planetunbesetzt_Fabriken'></span>   <img src='../bilder/icons/abwehr.gif'><span id='tooltip_planetunbesetzt_PDS'></span> </td></tr>"+
+            "<tr id='tooltip_planetunbesetzt_trMinerals'><td>   "+
+              "<img src='../bilder/icons/lemin.gif'><span id='tooltip_planetunbesetzt_Min0'></span>"+
+              "</td><td><img src='../bilder/icons/mineral_1.gif'><span id='tooltip_planetunbesetzt_Min1'></span> </td>  "+
+            "</td></tr><tr id='tooltip_planetunbesetzt_trMinerals2'><td>" + 
+              "<img src='../bilder/icons/mineral_2.gif'><span id='tooltip_planetunbesetzt_Min2'></span>  "+
+              "</td><td><img src='../bilder/icons/mineral_3.gif'><span id='tooltip_planetunbesetzt_Min3'></span> </td></tr>"+
             "</table>";
 
      } else setTimeout(addInfos, 250);
@@ -966,10 +1019,30 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             document.getElementById("tooltip_planetunbesetzt_Fabriken").textContent = details["Fabriken"];
             document.getElementById("tooltip_planetunbesetzt_PDS").textContent = details["P.D.S"];
            } else document.getElementById("tooltip_planetunbesetzt_trWirtschaft").style.display = "none";
+
+          var minPoints = localStorage[realname+":DETAILMINERALPOINTS"];
+          var minDensity = localStorage[realname+":DETAILMINERALDENSITY"];
+          if (minPoints && minDensity) {
+            document.getElementById("tooltip_planetunbesetzt_trMinerals").style.display = "";
+            document.getElementById("tooltip_planetunbesetzt_trMinerals2").style.display = "";
+            minPoints = eval(minPoints);
+            minDensity = eval(minDensity);
+            var verboseDensity = ["?", "???", "0.1", "1", "1.67", "2.5", "5", "10"];
+            //flüchtig, weit gestreut, verteilt, konzentriert, hochkonzentriert
+            //10             6           4          2                1
+            for (var i=0;i<4;i++) {
+              document.getElementById("tooltip_planetunbesetzt_Min"+i).textContent = verboseDensity[minDensity[i]+1] + " / "+(minPoints[i]*11.5);
+            } 
+          } else {
+            document.getElementById("tooltip_planetunbesetzt_trMinerals").style.display = "none";
+            document.getElementById("tooltip_planetunbesetzt_trMinerals2").style.display = "none";
+          }
         } else {
           document.getElementById("tooltip_planetunbesetzt_temperatur").style.display = "none";
           document.getElementById("tooltip_planetunbesetzt_trDS").style.display = "none";
           document.getElementById("tooltip_planetunbesetzt_trWirtschaft").style.display = "none";
+          document.getElementById("tooltip_planetunbesetzt_trMinerals").style.display = "none";
+          document.getElementById("tooltip_planetunbesetzt_trMinerals2").style.display = "none";
         }
 
       }
@@ -1171,7 +1244,7 @@ if (skrupelhack) {
   var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
   injectJS.innerHTML = ( is_chrome ? libraryinit : libraryinit.toSource()) + 
                         "var skrupelhack = "+ ( is_chrome ? skrupelhack : skrupelhack.toSource() )+";"+                       "libraryinit(); " + // " window.setTimeout = function(a,b){alert('timeout.'+a+':'+b);}; window.setInterval = function(a,b){alert('interval.'+a+':'+b);};"
-                       "skrupelhack(); " ;
+                       "setTimeout(skrupelhack(), 50); " ;
   var jq = document.createElement("script");
   jq.type="text/javascript";
   jq.src="js/jquery/jquery.js";
