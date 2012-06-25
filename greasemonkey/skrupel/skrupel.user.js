@@ -1031,7 +1031,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             //flüchtig, weit gestreut, verteilt, konzentriert, hochkonzentriert
             //10             6           4          2                1
             for (var i=0;i<4;i++) {
-              document.getElementById("tooltip_planetunbesetzt_Min"+i).textContent = verboseDensity[minDensity[i]+1] + " / "+(minPoints[i]*11.5);
+              document.getElementById("tooltip_planetunbesetzt_Min"+i).textContent = verboseDensity[minDensity[i]+1] + " / "+(minPoints[i]*11.5 * ( minDensity[i] == 1 ? 2 : 1 ));
             } 
           } else {
             document.getElementById("tooltip_planetunbesetzt_trMinerals").style.display = "none";
