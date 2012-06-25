@@ -989,7 +989,20 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
               "<img src='../bilder/icons/mineral_2.gif'><span id='tooltip_planetunbesetzt_Min2'></span>  "+
               "</td><td><img src='../bilder/icons/mineral_3.gif'><span id='tooltip_planetunbesetzt_Min3'></span> </td></tr>"+
             "</table>";
+            
+            
+       var tooltip2 = tooltip.cloneNode(false);
+       tooltip2.id = "tooltip_enemyshipX";
+       tooltip.parentNode.appendChild(tooltip2);
+       temp = document.createElement("div");
+       temp.style.position="absoltue";
+       temp.style.borderStyle = "solid";
+       temp.style.borderWidth="1px";
+       temp.style.borderColor="#444444 #666666 #666666 #666666";
+       temp.style.backgroundColor="#444444";
+       tooltip2.appendChild(temp);
 
+       temp.innerHTML = "<table>" + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr></table>"; 
      } else setTimeout(addInfos, 250);
     }
     addInfos();
@@ -1045,6 +1058,35 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
           document.getElementById("tooltip_planetunbesetzt_trMinerals2").style.display = "none";
         }
 
+      }
+    }
+    
+    window.oldtooltipenemyship = tooltipenemyship;
+    window.tooltipenemyship = function(xdat,ydat,beziehung) {
+      if(settings.enabletooltips) {        
+        oldtooltipenemyship(xdat,ydat,beziehung);
+
+        var imgsrc = $('a[onMouseOver="tooltipenemyship('+xdat+','+ydat+',0);"] img').attr("src");
+      //  alert(imgsrc);
+        var anzeige = /schiff_([0-9]+)_/.exec(imgsrc)[1] * 1;
+        var mass_min = anzeige * 100 - 50; var mass_max = anzeige * 100 + 49;
+        if (mass_min <= 50) mass_min = 0;
+        if (mass_max > 1000) mass_max = 1000;
+        document.getElementById("tooltip_enemyshipX_mass").textContent = mass_min + " - " + mass_max;
+    //  alert("ftl: " + mass_min);
+
+        var dom_tip = document.getElementById('tooltip_enemyshipX');
+        dom_tip.style.left = xdat+5;
+        dom_tip.style.top = ydat+5;
+        dom_tip.style.visibility = 'visible';
+      }
+    }
+    
+    window.oldtooltipenemyshipout = tooltipenemyshipout;
+    window.tooltipenemyshipout = function(xdat,ydat,beziehung) {
+      if(settings.enabletooltips) {
+        oldtooltipenemyshipout(xdat, ydat, beziehung);
+        document.getElementById('tooltip_enemyshipX').style.visibility='hidden';
       }
     }
 
