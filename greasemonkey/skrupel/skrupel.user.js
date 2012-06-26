@@ -1260,7 +1260,20 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   }
   
 } else if (islocation("uebersicht_imperien","1")) {
-  alert("x");
+  skrupelhack = function(){
+    var rassen = new Array("", "");
+    var as = document.getElementsByTagName("a");
+    var checkrasse = /meta_rassen[.]php[?]fu=2.*rasse=([^&=]+)/;
+    var player = 0;
+    for (var i=0;i<as.length;i++) {
+      var check = checkrasse.exec(as[i].href);
+      if (check != null) {
+        player += 1;
+        rassen[player] = check[1];
+      }
+    }
+    localStorage["rassen:"+gameSId()] = rassen.toSource();
+  }
 } else if (islocation("planeten_gamma", "4")) {
   ////////////////////////////////////////////////////////////////////
   //FABRIKEN
