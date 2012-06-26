@@ -9,6 +9,7 @@
 // @include        http://*/skrupel/inhalt/planeten_gamma.php?fu=4*
 // @include        http://*/skrupel/inhalt/galaxie.php*
 // @include        http://*/skrupel/inhalt/uebersicht_kolonien.php*
+// @include        http://*/skrupel/inhalt/uebersicht_imperien.php*
 // @include        http://*/skrupel/inhalt/meta_simulation.php*          
 // @include        http://*/skrupel/inhalt/menu.php?fu=1*
 // @include        http://*/skrupel/inhalt/meta.php?fu=1*
@@ -175,7 +176,13 @@ libraryinit();
 
 var skrupelhack = null;
 
-if (window.location.toString().contains("flotte_beta.php?fu=1&")) {
+var locskr = /skrupel\/inhalt\/([^?.]+)[.]php[?]fu=([0-9]+)/.exec(window.location.toString());
+
+function islocation(url, fu) {
+  return (locskr[1] == url) && (locskr[2] == fu);
+}
+
+if (islocation("flotte_beta","1")) {
   ///////////////////////////////////////////////////////////////////
   //SCAN
   ///////////////////////////////////////////////////////////////////
@@ -233,7 +240,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1&")) {
       globals()["PLANETEN:"+planets[i]["pid"]] = name;
     }
   }
-} else if (window.location.toString().contains("flotte_beta.php?fu=2")) {
+} else if (islocation("flotte_beta","2")) {
   ///////////////////////////////////////////////////////////////////
   //DETAILSCAN
   ///////////////////////////////////////////////////////////////////
@@ -260,7 +267,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1&")) {
     var name = globals()["PLANETEN:"+pid];
     localStorage["Planet:"+name+":DETAILWIRTSCHAFT"] = infos.toSource();    
   }
-} else if (window.location.toString().contains("flotte_beta.php?fu=10")) {
+} else if (islocation("flotte_beta","10")) {
   ///////////////////////////////////////////////////////////////////
   //DETAIL MINERAL SCAN
   ///////////////////////////////////////////////////////////////////
@@ -300,7 +307,7 @@ if (window.location.toString().contains("flotte_beta.php?fu=1&")) {
     
     //alert(count + " <> "+density);
   }
-} else if (window.location.toString().contains("flotte.php?fu=6") || window.location.toString().contains("flotte.php?fu=1")) {
+} else if (islocation("flotte","6") || islocation("flotte","1")) {
   ////////////////////////////////////////////////////////////////////////
   //SCHIFF AUSWAHL
   ////////////////////////////////////////////////////////////////////////
@@ -419,7 +426,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       as[i].parentNode.appendChild(btn);
     }
   }
-} else if (window.location.toString().contains("flotte.php?fu=3")) {
+} else if (islocation("flotte","3")) {
   /////////////////////////////////////////////////////////////////////
   //SCHIFFS INFO
   /////////////////////////////////////////////////////////////////////
@@ -448,7 +455,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       //table.rows[6].innerHTML = "<td></td><td><input type='checkbox' id='mfe' onclick='globals().meta_flotte_enabled=document.getElementById(\"mfe\").checked'/>Flotte aktiviert</td>";
     }
   }
-} else if (window.location.toString().contains("flotte_alpha.php?fu=1")) {
+} else if (islocation("flotte_alpha","1")) {
   ///////////////////////////////////////////////////////////////////
   //KURS SETZEN
   ///////////////////////////////////////////////////////////////////
@@ -473,7 +480,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     inputs[inputs.length-1].value="Flottenkurs setzen";
   }
   
-} else if (window.location.toString().contains("flotte_alpha.php?fu=3")) {
+} else if (islocation("flotte_alpha","3")) {
   ///////////////////////////////////////////////////////////////////
   //(FLOTTEN) SPEZIALMISSIONEN
   ///////////////////////////////////////////////////////////////////
@@ -587,7 +594,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 
         
   }
-} else if (window.location.toString().contains("flotte_beta.php?fu=4")) {
+} else if (islocation("flotte_beta","4")) {
   ///////////////////////////////////////////////////////////////////
   //TRANSPORTER
   ///////////////////////////////////////////////////////////////////
@@ -759,7 +766,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   }
   
   
-} else if (window.location.toString().contains("flotte_delta.php?fu=1")) {
+} else if (islocation("flotte_delta","1")) {
   ///////////////////////////////////////////////////////////////////
   //PROJEKTILE
   ///////////////////////////////////////////////////////////////////
@@ -812,7 +819,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       
     };
   }
-} else if (window.location.toString().contains("flotte_delta.php?fu=5")) {
+} else if (islocation("flotte_delta","5")) {
   ///////////////////////////////////////////////////////////////////
   //FLOTTEN SCHIFF VERWALTUNGS OPTIONEN
   ///////////////////////////////////////////////////////////////////
@@ -838,7 +845,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     }    
   }
   
-} else if (window.location.toString().contains("menu.php?fu=1")) {
+} else if (islocation("menu","1")) {
   ///////////////////////////////////////////////////////////////////
   //MENU
   ///////////////////////////////////////////////////////////////////
@@ -867,7 +874,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     ships.parentNode.appendChild(temp);   
   }
   
-} else if (window.location.toString().contains("meta.php?fu=1") || window.location.toString().contains("meta_rassen.php?fu=1")) {
+} else if (islocation("meta","1") || islocation("meta_rassen","1")) {
   ///////////////////////////////////////////////////////////////////
   //META MENU
   ///////////////////////////////////////////////////////////////////
@@ -881,7 +888,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     }
     window.link = window.metalink; // for rassen
   }
-} else if (window.location.toString().contains("flotte_gamma.php?fu=2")) {
+} else if (islocation("flotte_gamma","2")) {
   ///////////////////////////////////////////////////////////////////
   //TAKTIK
   ///////////////////////////////////////////////////////////////////
@@ -963,7 +970,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
      };
    }
   }
-} else if (window.location.toString().contains("galaxie.php?fu=2")) {
+} else if (islocation("galaxie","2")) {
   ///////////////////////////////////////////////////////////////////
   //GALAXIE
   ///////////////////////////////////////////////////////////////////
@@ -1185,7 +1192,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   }*/
   }
   ///////////////////////////////////////////////////////////////////
-} else if (window.location.toString().contains("uebersicht_kolonien.php?fu=1")) {
+} else if (islocation("uebersicht_kolonien","1")) {
   ////////////////////////////////////////////////////////////////////
   //KOLONIEN FENSTER
   /////////////////////////////////////////////////////////////////////
@@ -1252,7 +1259,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     else if (hints > 0) document.getElementById("bodybody").style.backgroundColor = "yellow";
   }
   
-} else if (window.location.toString().contains("planeten_gamma.php?fu=4")) {
+} else if (islocation("uebersicht_imperien","1")) {
+  alert("x");
+} else if (islocation("planeten_gamma", "4")) {
   ////////////////////////////////////////////////////////////////////
   //FABRIKEN
   /////////////////////////////////////////////////////////////////////
@@ -1262,7 +1271,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   //replace select with text input: (replacing works, but selling doesn't??)
   //var temp = document.getElementsByName("vorratauftrag");
   //temp[0].parentNode.innerHTML = "<input value='0' name='vorratauftrag' style='width:45px;text-align:right' type='text'>";
-} else if (window.location.toString().contains("meta_simulation.php?fu=2")) {
+} else if (islocation("meta_simulation","2")) {
   ////////////////////////////////////////////////////////////////////
   //SIMULATION
   /////////////////////////////////////////////////////////////////////
