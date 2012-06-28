@@ -13,7 +13,7 @@
 // @include        http://*/skrupel/inhalt/meta_simulation.php*          
 // @include        http://*/skrupel/inhalt/menu.php?fu=1*
 // @include        http://*/skrupel/inhalt/meta.php?fu=1*
-// @include        http://*/skrupel/inhalt/meta_rassen.php?fu=1*
+// @include        http://*/skrupel/inhalt/meta_rassen.php*
 // ==/UserScript==
 
 function libraryinit(){
@@ -117,12 +117,14 @@ window.submitResultDefaultDisplay = function(id, x){
 //Skrupel utilities
 window.gameSId = function(){ return (/&sid=([^&]+)/.exec(window.location)[1]); }; //TODO: Use gameSId() instead of gameSId later
 
-
+localStorageGetData = function(id) {
+  var data = localStorage[id];
+  if (data) data = eval(data);
+  return data;
+}
 
 localStorageGetShipData = function(id) {
-  var details = localStorage["Ship:"+id];
-  if (details) details = eval(details);
-  return details;
+  return getData("Ship:"+id);
 }
 
 localStorageSetShipData = function(id, ship) {
@@ -888,6 +890,60 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     }
     window.link = window.metalink; // for rassen
   }
+} else if (islocation("meta_rassen", "2")) {
+  //////////////////////////////////////////////////////////////////
+  //RASSEN INFO
+  //////////////////////////////////////////////////////////////////
+  skrupelhack = function(){
+    var tds = document.getElementsByTagName("td");
+    var rasse = { };
+    
+    var cur = 0;
+    for (; cur < tds.length; cur++) 
+      if ( tds[cur].textContent == "Bevorzugte Planetenklasse") { 
+        rasse.planetClass = tds[cur+1].textContent; 
+        break; 
+      }
+    
+    var cur = 0;
+    for (; cur < tds.length; cur++) 
+      if ( tds[cur].textContent == "Bevorzugte Temperatur") { 
+        rasse.temperature = /([0-9]+) +Grad/.exec(tds[cur+1].textContent)[1]; 
+        break; 
+      }
+    
+    var ships = [];
+    var first = true;
+    var ship = [];
+    function putShip(){
+      if (first) { first = false; return; }
+      ships.push(ship);
+      ship = [];
+    }
+    
+    var inProperties = ["!!name", "!!tl", "Crew", "Masse", "Tank", "Fracht", "Antriebe", "Energetik", "Projektile", "Hangar", "Cantox", "Baxterium", "Rennurbin", "Vomisaan"];
+    for (; cur < tds.length; cur++) {
+      if (tds[cur].style.fontSize == "11px") {
+        putShip();
+        ship[0] = tds[cur].textContent;
+        cur+=1;
+        ship[1] = /[0-9]+/.exec(tds[cur].textContent)[0];
+      } else {
+        var idx = inProperties.indexOf(tds[cur].textContent);
+        if (idx >= 0) {
+          cur += 2;
+          ship[idx] = /[0-9]+/.exec(tds[cur].textContent)[0];
+        }
+      }
+    }
+    putShip();
+    
+    var rassename = /rasse=([^&=]+)/.exec(location.href)[1];
+  
+    localStorage["Rasse:"+rassename+":meta"] = rasse.toSource();
+    localStorage["Rasse:"+rassename+":ships"] = ships.toSource();
+//    alert(localStorage["Rasse:"+rassename+":ships"]);
+  }
 } else if (islocation("flotte_gamma","2")) {
   ///////////////////////////////////////////////////////////////////
   //TAKTIK
@@ -1009,7 +1065,10 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
        temp.style.backgroundColor="#444444";
        tooltip2.appendChild(temp);
 
-       temp.innerHTML = "<table>" + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr></table>"; 
+       temp.innerHTML = "<table>" 
+                        + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr>"
+                        + "<tr><td colspan=2 id='tooltip_enemyshipX_extra'>?</td></tr>"
+                        + "</table>"; 
      } else setTimeout(addInfos, 250);
     }
     addInfos();
@@ -1075,12 +1134,27 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 
         var imgsrc = $('a[onMouseOver="tooltipenemyship('+xdat+','+ydat+',0);"] img').attr("src");
       //  alert(imgsrc);
-        var anzeige = /schiff_([0-9]+)_/.exec(imgsrc)[1] * 1;
+        var img = /schiff_([0-9]+)_([0-9]+)/.exec(imgsrc);
+        var anzeige = img[1] * 1;
         var mass_min = anzeige * 100 - 50; var mass_max = anzeige * 100 + 49;
         if (mass_min <= 50) mass_min = 0;
         if (mass_max > 1000) mass_max = 1000;
         document.getElementById("tooltip_enemyshipX_mass").textContent = mass_min + " - " + mass_max;
     //  alert("ftl: " + mass_min);
+
+        var matches = [];
+        var rassen = localStorageGetData("rassen:"+gameSId());
+        if (rassen && rassen[img[2]*1]) {
+          var rasse = rassen[img[2]*1];
+          var ships = localStorageGetData("Rasse:"+rasse+":ships");
+          if (ships) {
+            
+            for (var i=0;i<ships.length;i++)
+              if (ships[i][3] >= mass_min && ships[i][3] <= mass_max) 
+                matches.push(ships[i][0]);
+          }
+        }
+        document.getElementById("tooltip_enemyshipX_extra").textContent = "Eventuell: " + matches.join(", ") + " ?";
 
         var dom_tip = document.getElementById('tooltip_enemyshipX');
         dom_tip.style.left = xdat+5;
