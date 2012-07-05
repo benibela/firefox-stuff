@@ -115,7 +115,8 @@ window.submitResultDefaultDisplay = function(id, x){
 
 /////////////////////////////////////////////////////////////////
 //Skrupel utilities
-window.gameSId = function(){ return (/&sid=([^&]+)/.exec(window.location)[1]); }; //TODO: Use gameSId() instead of gameSId later
+window.getPageParam = function(param){ return (new RegExp("&"+param+"=([^&]+)")).exec(window.location)[1]; }; 
+window.gameSId = function(){ return (/&sid=([^&]+)/.exec(window.location)[1]); }; 
 
 localStorageGetData = function(id) {
   var data = localStorage[id];
@@ -124,7 +125,7 @@ localStorageGetData = function(id) {
 }
 
 localStorageGetShipData = function(id) {
-  return getData("Ship:"+id);
+  return localStorageGetData("Ship:"+id);
 }
 
 localStorageSetShipData = function(id, ship) {
@@ -331,11 +332,19 @@ if (islocation("flotte_beta","1")) {
        // alert(shipId);
        // alert(localStorageGetShipData);
         //alert(localStorageGetShipData(shipId).mission);
-        
+
         shipData = localStorageGetShipData(shipId);
         if (shipData) {
+          var s = "";
+          if (shipData.mission)  s = "Mission: " + shipData.mission;
+          if (shipData.aggro) {
+            var taktikColors = Array("white", "red", "lime");
+            var taktikNames = Array("", "A", "D");
+            if (s != "") s += "<br>";
+            s += "Taktik:  <span style='color: "+taktikColors[shipData.taktik]+"'>"+shipData.aggro + taktikNames[shipData.taktik]+"</span>" ;
+          }
           var extra = document.createElement("div");
-          extra.innerHTML = "Mission: " + shipData.mission;
+          extra.innerHTML = s;
           imgs[i].parentNode.appendChild(extra);
         }
       } else if ((imgs[i].width == 15 && imgs[i].height == 15 && imgs[i].src.contains("schiff_aktiv")) || 
@@ -949,8 +958,19 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   //TAKTIK
   ///////////////////////////////////////////////////////////////////
   skrupelhack = function (){ 
+    var storeTaktikDirect = function(shipid, aggro, taktik) {
+      localStorageSetShipDataProperty(shipid, "aggro", aggro);
+      localStorageSetShipDataProperty(shipid, "taktik", taktik);
+    }
+    var storeTaktik = function(ship){
+      storeTaktikDirect(ship, document.getElementsByName("aggro")[0].value, document.getElementsByName("taktik")[0].value);
+    }
+  
     var flotte = globals().meta_flotte;
-    if (flotte.length == 0) return;
+    if (flotte.length == 0) { 
+      document.forms[0].onsubmit = function() {   storeTaktik(getPageParam("shid")); };
+      return;
+    }
     var btn = document.createElement("input"); btn.type = "button"; btn.value = "Flottentaktik anzeigen"; btn.style.width = "255px";
     var temp = document.createElement("center"); temp.appendChild(btn);
     document.body.appendChild(temp);
@@ -999,6 +1019,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
           var ki = /option value="([0-9]+)" selected/.exec(answer)[1];
           priority[aggro].push(id);
           kind[id] = ki;
+          storeTaktikDirect(id, aggro, ki);
           received++;
           document.getElementById("progress").style.width = 100*received/flotte.length+"%";
           if (received == flotte.length) displayResults();
@@ -1020,6 +1041,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
      oldbtn.type = "button";
      oldbtn.value = "für alle setzen";
      oldbtn.onclick = function(){
+       for (var i=0;i<flotte.length;i++) storeTaktik(flotte[i]);
        submitForShips(flotte, document.forms[0], function(id, res, output){
          output.innerHTML = output.innerHTML + globals().shipNames[id] + ":" + (/<center>(.*)<\/center>/.exec(res)[1]) + "<br>";
        });
