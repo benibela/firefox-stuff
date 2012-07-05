@@ -191,6 +191,25 @@ if (islocation("flotte_beta","1")) {
   ///////////////////////////////////////////////////////////////////
   skrupelhack = function (){
     var planets = new Array();
+    
+    var autoDetailScan = function(id, planet) {
+      var scanned = false;
+      if (planet) {
+        var lsname = gameSId() + ":" + planet;
+        scanned = localStorage["Planet:" + lsname+":DETAILMINERALDENSITY"];
+      } else {
+        var temp = localStorageGetShipData(id);
+        scanned = temp && temp.scan;
+      }
+      if (!scanned) {
+        var ifr = document.createElement("iframe");
+        ifr.src = tds[i].firstChild.action;
+        //ifr.onload = (function(btn){ btn.style.color = "#00FF00"; })(tds[i].firstChild.elements[0]);
+        ifr.style.display="none";
+        tds[i].firstChild.elements[0].parentNode.appendChild(ifr);
+      } else tds[i].firstChild.elements[0].style.color = "#000000";
+    };
+    
     //parse
     var tds = document.getElementsByTagName("td");
     var inPlanet = false; 
@@ -207,20 +226,15 @@ if (islocation("flotte_beta","1")) {
             planetInfos[lastName] = tds[i];
           } else lastName = tds[i].textContent;
         } 
-      } else if (inPlanet && tds[i].firstChild && tds[i].firstChild.nodeType == 1 && tds[i].firstChild.nodeName == "FORM") {
+      } else if (tds[i].firstChild && tds[i].firstChild.nodeType == 1 && tds[i].firstChild.nodeName == "FORM") {
         var temp = /pid=([0-9]+)/.exec(tds[i].firstChild.action);
         if (temp) { //temp == null, für schiffe
           planetInfos["pid"] = temp[1];
-          
-          var lsname = gameSId() + ":" + planetInfos["Name"].textContent;
-          if (!localStorage["Planet:" + lsname+":DETAILMINERALDENSITY"]) {
-            var ifr = document.createElement("iframe");
-            ifr.src = tds[i].firstChild.action;
-            //ifr.onload = (function(btn){ btn.style.color = "#00FF00"; })(tds[i].firstChild.elements[0]);
-            ifr.style.display="none";
-            tds[i].firstChild.elements[0].parentNode.appendChild(ifr);
-          } else tds[i].firstChild.elements[0].style.color = "#000000";
-        } 
+          autoDetailScan(temp[1], planetInfos["Name"].textContent);
+        } else {
+          temp = /shid=([0-9]+)/.exec(tds[i].firstChild.action);
+          if (temp) autoDetailScan(temp[1]);
+        }
       } 
     }
     if (inPlanet) {planets.push(planetInfos); inPlanet = false; }
