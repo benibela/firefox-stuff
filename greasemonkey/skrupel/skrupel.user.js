@@ -270,6 +270,26 @@ if (islocation("flotte_beta","1")) {
     var name = globals()["PLANETEN:"+pid];
     localStorage["Planet:"+name+":DETAILWIRTSCHAFT"] = infos.toSource();    
   }
+} else if (islocation("flotte_beta","3")) {
+  ///////////////////////////////////////////////////////////////////
+  //DETAIL SHIP SCAN
+  ///////////////////////////////////////////////////////////////////
+  skrupelhack = function (){	
+    var inProperties = ["!!image", "Name", "Schaden", "Crew", "Masse", "Lemin", "Güter", "Antrieb", "Energetik", "Projektil", "Hangar"];
+    var ship = Array();
+    
+    var tds = document.getElementsByTagName("td");
+    var idx = -1;
+    for (var cur = 0; cur < tds.length; cur++) {
+      var tc = tds[cur].textContent.trim();
+      if (tc != "") {
+        if (idx == -1) idx = inProperties.indexOf(tc);
+        else { ship[idx] = tc; idx = -1; }
+      }
+    }
+    
+    localStorageSetShipDataProperty(getPageParam("shid"), "scan", ship.toSource());
+  }
 } else if (islocation("flotte_beta","10")) {
   ///////////////////////////////////////////////////////////////////
   //DETAIL MINERAL SCAN
@@ -1078,20 +1098,35 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             
        var tooltip2 = tooltip.cloneNode(false);
        tooltip2.id = "tooltip_enemyshipX";
+       tooltip2.visibility = "visible";
+       tooltip2.display = "none";
        tooltip.parentNode.appendChild(tooltip2);
        temp = document.createElement("div");
-       temp.style.position="absoltue";
+       temp.style.position="absolute";
        temp.style.borderStyle = "solid";
        temp.style.borderWidth="1px";
        temp.style.borderColor="#444444 #666666 #666666 #666666";
        temp.style.backgroundColor="#444444";
        tooltip2.appendChild(temp);
 
-       temp.innerHTML = "<table>" 
-                        + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr>"
-                        + "<tr><td colspan=2 id='tooltip_enemyshipX_extra'>?</td></tr>"
-                        + "</table>"; 
-                        
+       //var speakingNames = ["skip", "Name", "Schaden", "Crew", "Masse", "Lemin", "Güter", "Antrieb", "Energetik", "Projektil", "Hangar"]
+       var speakingNames = ["skip", "Name", "krieg", "crew", "masse", "lemin", "vorrat", "antrieb", "laser", "projektil", "hangar"]
+       for (var i=2; i<=10; i++) speakingNames[i] = "<img src='../bilder/icons/"+speakingNames[i]+".gif' width='17' height='17'/>";
+       
+       var ih = 
+         "<table style='min-width:150px'>" 
+         + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr>"
+         + "<tr><td colspan=4 id='tooltip_enemyshipX_extra'>?</td></tr>"
+         + "</table>"
+         + "<div id = 'tooltip_enemyshipX_scan'><table>";
+       for (var i=1;i<speakingNames.length;i+=2) {
+         ih += "<tr>" 
+             + "<td>"+speakingNames[i]+"</td><td id='tooltip_enemyshipX_scan"+i+"'></td>"
+             + "<td>"+speakingNames[i+1]+"</td><td id='tooltip_enemyshipX_scan"+(i+1)+"'></td>";
+             + "</tr>";
+       }
+       ih += "</table>"; 
+       temp.innerHTML = ih;                         
                         
        var meta = document.createElement("div");
        meta.innerHTML = "<div style='margin-top:75px'><a href='#' style='color:blue; cursor:pointer' onclick='searchxxx()'>Suche</a></div>";
@@ -1159,7 +1194,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       if(settings.enabletooltips) {        
         oldtooltipenemyship(xdat,ydat,beziehung);
 
-        var imgsrc = $('a[onMouseOver="tooltipenemyship('+xdat+','+ydat+',0);"] img').attr("src");
+        var link = $('a[onMouseOver="tooltipenemyship('+xdat+','+ydat+',0);"]');
+        var imgsrc = link.find("img").attr("src");
       //  alert(imgsrc);
         var img = /schiff_([0-9]+)_([0-9]+)/.exec(imgsrc);
         var anzeige = img[1] * 1;
@@ -1183,10 +1219,26 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
         }
         document.getElementById("tooltip_enemyshipX_extra").textContent = "Eventuell: " + matches.join(", ") + " ?";
 
+        var scanned = false;
+        if (link.attr("onclick")) {
+          var m = /[(] *[0-9]+, *[0-9]+, *([0-9]+)/.exec(link.attr("onclick").toSource());
+          if (m) m = m[1];
+          var shipData = localStorageGetShipData(m);
+          if (shipData && shipData.scan) {
+            shipData.scan = eval(shipData.scan);
+            scanned = true;
+            for (var i=1; i<=10;i++)
+              if (document.getElementById("tooltip_enemyshipX_scan"+i)) document.getElementById("tooltip_enemyshipX_scan"+i).textContent = shipData.scan[i];          
+          }
+        }
+        
+        document.getElementById("tooltip_enemyshipX_scan").style.display = scanned ? "block" : "none";
+
         var dom_tip = document.getElementById('tooltip_enemyshipX');
         dom_tip.style.left = xdat+5;
         dom_tip.style.top = ydat+5;
-        dom_tip.style.visibility = 'visible';
+        dom_tip.style.display = "block";
+        dom_tip.style.visibility = "visible";
       }
     }
     
@@ -1194,7 +1246,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     window.tooltipenemyshipout = function(xdat,ydat,beziehung) {
       if(settings.enabletooltips) {
         oldtooltipenemyshipout(xdat, ydat, beziehung);
-        document.getElementById('tooltip_enemyshipX').style.visibility='hidden';
+        document.getElementById('tooltip_enemyshipX').style.display='none';
       }
     }
 
