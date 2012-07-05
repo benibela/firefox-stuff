@@ -1069,6 +1069,11 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
                         + "<tr><td>Masse</td><td id='tooltip_enemyshipX_mass'>?</td></tr>"
                         + "<tr><td colspan=2 id='tooltip_enemyshipX_extra'>?</td></tr>"
                         + "</table>"; 
+                        
+                        
+       var meta = document.createElement("div");
+       meta.innerHTML = "<div style='margin-top:75px'><a href='#' style='color:blue; cursor:pointer' onclick='searchxxx()'>Suche</a></div>";
+       document.getElementById("sticky").appendChild(meta);
      } else setTimeout(addInfos, 250);
     }
     addInfos();
@@ -1264,6 +1269,48 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       } else 
       window.startClickPos = getMouseXY(e);
   }*/
+  
+
+        function movemap(wertx,werty) { //taken from skrupel source (planeten)
+
+            breite=fensterbreit();
+            hoch=fensterhoch();
+    
+            aktuellx=wertx-15;
+            aktuelly=werty-15;
+    
+            wertx=wertx-(breite/2);
+            werty=werty-(hoch/2);
+                            var scrollDiv = parent.parent.mittemitte.document.getElementById("complete");
+                if(scrollDiv.contentScroll) scrollDiv.contentScroll(wertx,werty,false);
+                        parent.parent.mittemitte.document.getElementById("aktuell").style.visibility='visible';
+            parent.parent.mittemitte.document.getElementById("aktuell").style.left=aktuellx;
+            parent.parent.mittemitte.document.getElementById("aktuell").style.top=aktuelly;
+    
+        }
+  
+  
+    window.searchxxx = function() {  //search without xxx doesn't work
+      var searchfor = prompt("Suche nach:");
+      if (!searchfor) return;
+      
+      var coords = /([0-9]+) *[:\/] *([0-9]+)/.exec(searchfor);
+      if (coords) {
+        movemap(coords[1], coords[2]);
+        return;
+      }
+      
+      var as = document.getElementsByTagName("a");
+      var sfb = "["+ searchfor + "]";
+      for (var i=0;i<as.length;i++) {
+        if (as[i].onmouseover && as[i].onmouseover.toSource().contains(sfb)) {
+          var x = /linieplanet[(] *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toSource());
+          if (!x)  x = /takeship[(][0-9]+, *[0-9]+, *[0-9]+, *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toSource());
+          movemap(x[1]*1, x[2]*1);
+         }
+      }
+         
+    }
   }
   ///////////////////////////////////////////////////////////////////
 } else if (islocation("uebersicht_kolonien","1")) {
