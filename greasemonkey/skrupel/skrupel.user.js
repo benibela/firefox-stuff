@@ -48,6 +48,8 @@ Array.prototype.removeAll = function(v) {
   this.push.apply(this, newa);
   return old;
 }
+if (!Object.toSource) 
+  Object.prototype.toSource = function() { return JSON.stringify(this); } //simulate ff in chrome
 window.request = function(page, data, callback, properties) {
   req = new XMLHttpRequest();
   req.open((data != null && data!="")?"POST":"GET", page, properties == null || properties.async == null || properties.async == true);
@@ -57,7 +59,7 @@ window.request = function(page, data, callback, properties) {
 }
 window.skrupelrequest = function(page, data, callback, properties) {
   return request(page + (/&uid.*/.exec(window.location)[0]), data, callback, properties);
-}
+}      
 
 window.getParams = function (form) {
       var params = [];
@@ -120,7 +122,7 @@ window.gameSId = function(){ return (/&sid=([^&]+)/.exec(window.location)[1]); }
 
 localStorageGetData = function(id) {
   var data = localStorage[id];
-  if (data) data = eval(data);
+  if (data) data = JSON.parse(data);
   return data;
 }
 
@@ -905,7 +907,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     var sid = gameSId();
     var ordner = localStorage["Ordner:"+sid];
     if (!ordner || ordner == "") return;
-    ordner = eval(ordner);
+    ordner = JSON.parse(ordner);
 
     var ships = links[3];
     var splitted = /(.*flotte[.]php[?]fu=1)(&.*)/.exec(ships.onclick);
@@ -1165,7 +1167,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             document.getElementById("tooltip_planetunbesetzt_dsCount").textContent = "("+localStorage[realname+":dsCount"]+")";            
           } else document.getElementById("tooltip_planetunbesetzt_trDS").style.display = "none";
           var details = localStorage[realname+":DETAILWIRTSCHAFT"];
-          if (details) details = eval(details);
+          if (details) details = JSON.parse(details);
           if (details && (details["Kolonisten"] != "0" || details["Minen"] != "0" || details["Fabriken"] != "0" || details["P.D.S"] != "0" )) {
             
             document.getElementById("tooltip_planetunbesetzt_trWirtschaft").style.display = "";
@@ -1180,8 +1182,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
           if (minPoints && minDensity) {
             document.getElementById("tooltip_planetunbesetzt_trMinerals").style.display = "";
             document.getElementById("tooltip_planetunbesetzt_trMinerals2").style.display = "";
-            minPoints = eval(minPoints);
-            minDensity = eval(minDensity);
+            minPoints = JSON.parse(minPoints);
+            minDensity = JSON.parse(minDensity);
             var verboseDensity = ["?", "???", "0.1", "1", "1.67", "2.5", "5", "10"];
             //flüchtig, weit gestreut, verteilt, konzentriert, hochkonzentriert
             //10             6           4          2                1
@@ -1230,16 +1232,18 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
               if (ships[i][3] >= mass_min && ships[i][3] <= mass_max) 
                 matches.push(ships[i][0]);
           }
-        }
+        } 
         document.getElementById("tooltip_enemyshipX_extra").textContent = "Eventuell: " + matches.join(", ") + " ?";
 
         var scanned = false;
         if (link.attr("onclick")) {
-          var m = /[(] *[0-9]+, *[0-9]+, *([0-9]+)/.exec(link.attr("onclick").toSource());
+          var oc = link.attr("onclick");
+          if (link.attr("onclick").toSource && link.attr("onclick").toSource()) oc = link.attr("onclick").toSource();
+          var m = /[(] *[0-9]+, *[0-9]+, *([0-9]+)/.exec(oc);;
           if (m) m = m[1];
           var shipData = localStorageGetShipData(m);
           if (shipData && shipData.scan) {
-            shipData.scan = eval(shipData.scan);
+            shipData.scan = JSON.parse(shipData.scan);
             scanned = true;
             for (var i=1; i<=10;i++)
               if (document.getElementById("tooltip_enemyshipX_scan"+i)) document.getElementById("tooltip_enemyshipX_scan"+i).textContent = shipData.scan[i];          
@@ -1524,3 +1528,4 @@ if (skrupelhack) {
   document.getElementsByTagName("head")[0].appendChild(jq);
   document.getElementsByTagName("head")[0].appendChild(injectJS);
 }
+
