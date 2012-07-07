@@ -305,6 +305,9 @@ if (islocation("flotte_beta","1")) {
     }
     
     localStorageSetShipDataProperty(getPageParam("shid"), "scan", ship.toSource());
+
+    if (window.frameElement && window.frameElement.parentNode) 
+      window.frameElement.parentNode.getElementsByTagName("input")[0].style.color="#00FF00";
   }
 } else if (islocation("flotte_beta","10")) {
   ///////////////////////////////////////////////////////////////////
@@ -1231,8 +1234,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
             for (var i=0;i<ships.length;i++)
               if (ships[i][3] >= mass_min && ships[i][3] <= mass_max) 
                 matches.push(ships[i][0]);
-          }
-        } 
+          } else matches.push("Rasse '"+rasse+"' unbekannt");
+        } else matches.push("Imperium unbekannt (siehe Übersicht/Imperien)");
         document.getElementById("tooltip_enemyshipX_extra").textContent = "Eventuell: " + matches.join(", ") + " ?";
 
         var scanned = false;
