@@ -10,6 +10,7 @@
 // @include        http://*/skrupel/inhalt/galaxie.php*
 // @include        http://*/skrupel/inhalt/uebersicht_kolonien.php*
 // @include        http://*/skrupel/inhalt/uebersicht_imperien.php*
+// @include        http://*/skrupel/inhalt/uebersicht_neuigkeiten.php*
 // @include        http://*/skrupel/inhalt/meta_simulation.php*          
 // @include        http://*/skrupel/inhalt/menu.php?fu=1*
 // @include        http://*/skrupel/inhalt/meta.php?fu=1*
@@ -48,8 +49,17 @@ Array.prototype.removeAll = function(v) {
   this.push.apply(this, newa);
   return old;
 }
-if (!Object.toSource) 
-  Object.prototype.toSource = function() { return JSON.stringify(this); } //simulate ff in chrome
+if (Object.toSource) 
+/*  Object.prototype.toSource = function() { return JSON.stringify(this); } //simulate ff in chrome
+else*/ {
+  window.oldJSONparse = JSON.parse;
+  JSON.parse = function(x){
+    if (!x) return x;
+//    alert(x);
+    if (x[0] == "(" || (x[0] == "[" && x[1] == ",")) return eval(x); //the old version used .toSource(), need to be able to read that
+    else return oldJSONparse(x); 
+  }
+}
 window.request = function(page, data, callback, properties) {
   req = new XMLHttpRequest();
   req.open((data != null && data!="")?"POST":"GET", page, properties == null || properties.async == null || properties.async == true);
@@ -131,7 +141,7 @@ localStorageGetShipData = function(id) {
 }
 
 localStorageSetShipData = function(id, ship) {
-  localStorage["Ship:"+id] = ship.toSource();
+  localStorage["Ship:"+id] = JSON.stringify(ship);
 }
 
 localStorageSetShipDataProperty = function(id, name, value) {
@@ -142,7 +152,6 @@ localStorageSetShipDataProperty = function(id, name, value) {
   //alert(localStorageGetShipData(id).toSource());
 }
 
-//window.getShipId() = function(s) { return (/shid=([0-9]+)/.exec(s)[1];)
 
 window.dominantSpeciesQuality = new Object();
 function addSpecies(quality, list) {
@@ -248,7 +257,7 @@ if (islocation("flotte_beta","1")) {
       localStorage["Planet:"+name+":Temperatur"] = planets[i]["Temperatur"].textContent;
       if (planets[i]["dom.Spezies"]) {
         var dsName = /^[^ ]+/.exec(planets[i]["dom.Spezies"].textContent);
-     //   alert("Name: " + planets[i]["Name"].textContent + "\nT: "+planets[i]["Temperatur"].textContent+"\nDS: "+dsName+":"+quality);
+
         localStorage["Planet:"+name+":dsName"] = dsName;
         localStorage["Planet:"+name+":dsCount"] = /[(] *([0-9]+) *[)]/.exec(planets[i]["dom.Spezies"].textContent)[1];
         planets[i]["dom.Spezies"].firstChild.style.color = dominantSpeciesQualityColor(dsName);
@@ -284,7 +293,7 @@ if (islocation("flotte_beta","1")) {
     for (var p in infos) { infos[p] = infos[p].textContent;}
     var pid = /pid=([0-9]+)/.exec(location.href)[1];
     var name = globals()["PLANETEN:"+pid];
-    localStorage["Planet:"+name+":DETAILWIRTSCHAFT"] = infos.toSource();    
+    localStorage["Planet:"+name+":DETAILWIRTSCHAFT"] = JSON.stringify(infos);    
   }
 } else if (islocation("flotte_beta","3")) {
   ///////////////////////////////////////////////////////////////////
@@ -304,7 +313,7 @@ if (islocation("flotte_beta","1")) {
       }
     }
     
-    localStorageSetShipDataProperty(getPageParam("shid"), "scan", ship.toSource());
+    localStorageSetShipDataProperty(getPageParam("shid"), "scan", JSON.stringify(ship));
 
     if (window.frameElement && window.frameElement.parentNode) 
       window.frameElement.parentNode.getElementsByTagName("input")[0].style.color="#00FF00";
@@ -340,8 +349,8 @@ if (islocation("flotte_beta","1")) {
     var pid = /pid=([0-9]+)/.exec(location.href)[1];
     var name = globals()["PLANETEN:"+pid];
     //alert(pid);
-    localStorage["Planet:"+name+":DETAILMINERALPOINTS"] = count.toSource();
-    localStorage["Planet:"+name+":DETAILMINERALDENSITY"] = density.toSource();
+    localStorage["Planet:"+name+":DETAILMINERALPOINTS"] = JSON.stringify(count);
+    localStorage["Planet:"+name+":DETAILMINERALDENSITY"] = JSON.stringify(density);
     
 
     if (window.parent && window.parent.frameElement && window.parent.frameElement.parentNode) 
@@ -368,10 +377,6 @@ if (islocation("flotte_beta","1")) {
         imgs[i].width = 0.50*122;
         imgs[i].height = 0.50*80;
         
-       // alert(shipId);
-       // alert(localStorageGetShipData);
-        //alert(localStorageGetShipData(shipId).mission);
-
         shipData = localStorageGetShipData(shipId);
         if (shipData) {
           var s = "";
@@ -642,7 +647,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     }
     appendButton(submitb);
 
-        
+    //todo: fix invisible buttons, because flexscroll doesn't notices the new table height
   }
 } else if (islocation("flotte_beta","4")) {
   ///////////////////////////////////////////////////////////////////
@@ -667,9 +672,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       if (kindWeight[n] > 0) sliders.push(window[kindSliders[n]]);
       kindRealSliders[n] = window[kindSliders[n]];
     }
-        
-    window.allowedWeight = /\(beladenzahl > ([0-9]+)\)/.exec(checken.toSource())[1] * 1;
-    window.allowedLemin = /\(lemin > ([0-9]+)\)/.exec(checken.toSource())[1] * 1;
+
+    window.allowedWeight = /\(beladenzahl > ([0-9]+)\)/.exec(checken.toString())[1] * 1;
+    window.allowedLemin = /\(lemin > ([0-9]+)\)/.exec(checken.toString())[1] * 1;
     
     window.oldSliderSetValue = Slider.prototype.setValue;
     Slider.prototype.setValue = function (v) {
@@ -878,7 +883,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     var ordner = {};
     for (var i=0;i<opts.length;i++)
       if (opts[i].value != "0") ordner[opts[i].value] = opts[i].textContent;
-    localStorage["Ordner:"+gameSId()] = ordner.toSource();
+    localStorage["Ordner:"+gameSId()] = JSON.stringify(ordner);
 
     var flotte = globals().meta_flotte;
     if (flotte.length == 0 || !globals().meta_flotte_enabled) return;
@@ -901,11 +906,6 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
   ///////////////////////////////////////////////////////////////////
   skrupelhack = function (){ 
     var links = document.getElementsByTagName("a");
-   // alert(links[2].onclick);
-   // alert(links[2].onclick.toSource().replace( /link_unten/, "link_all"));
-//  links[2].onclick = links[2].getAttribute("onclick").replace( /link_unten/, "link_all");
-    //    var changedLink = eval(links[2].onclick.toSource().replace( /link_unten/, "link_all"));
-  //  links[2].onclick = function(e){alert(changedLink); changedLink(e);};
 
     var sid = gameSId();
     var ordner = localStorage["Ordner:"+sid];
@@ -914,10 +914,10 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 
     var ships = links[3];
     var splitted = /(.*flotte[.]php[?]fu=1)(&.*)/.exec(ships.onclick);
-//alert(ships.onclick+"=>"+splitted);
+
     var links = "";
     for (var o in ordner) 
-      links += "<a onclick='"+splitted[1]+"&oid="+o+splitted[2]+"'>"+ordner[o]+"</a><br>";
+      links += "<a onclick='"+splitted[1].replace("'", '"')+"&oid="+o+splitted[2].replace("'", '"')+"' href=#>"+ordner[o]+"</a><br>";
     var temp = document.createElement("div");
     temp.innerHTML = links;
 
@@ -988,9 +988,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     
     var rassename = /rasse=([^&=]+)/.exec(location.href)[1];
   
-    localStorage["Rasse:"+rassename+":meta"] = rasse.toSource();
-    localStorage["Rasse:"+rassename+":ships"] = ships.toSource();
-//    alert(localStorage["Rasse:"+rassename+":ships"]);
+    localStorage["Rasse:"+rassename+":meta"] = JSON.stringify(rasse);
+    localStorage["Rasse:"+rassename+":ships"] = JSON.stringify(ships);
   }
 } else if (islocation("flotte_gamma","2")) {
   ///////////////////////////////////////////////////////////////////
@@ -1241,7 +1240,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
         var scanned = false;
         if (link.attr("onclick")) {
           var oc = link.attr("onclick");
-          if (link.attr("onclick").toSource && link.attr("onclick").toSource()) oc = link.attr("onclick").toSource();
+          if (link.attr("onclick").toString() && link.attr("onclick").toString()) oc = link.attr("onclick").toString();
           var m = /[(] *[0-9]+, *[0-9]+, *([0-9]+)/.exec(oc);;
           if (m) m = m[1];
           var shipData = localStorageGetShipData(m);
@@ -1398,9 +1397,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       var as = document.getElementsByTagName("a");
       var sfb = "["+ searchfor + "]";
       for (var i=0;i<as.length;i++) {
-        if (as[i].onmouseover && as[i].onmouseover.toSource().contains(sfb)) {
-          var x = /linieplanet[(] *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toSource());
-          if (!x)  x = /takeship[(][0-9]+, *[0-9]+, *[0-9]+, *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toSource());
+        if (as[i].onmouseover && as[i].onmouseover.toString().contains(sfb)) {
+          var x = /linieplanet[(] *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toString());
+          if (!x)  x = /takeship[(][0-9]+, *[0-9]+, *[0-9]+, *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toString());
           movemap(x[1]*1, x[2]*1);
          }
       }
@@ -1486,9 +1485,52 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       if (check != null) {
         player += 1;
         rassen[player] = check[1];
-      }
+      } else if (as[i].href.contains("uebersicht_imperien.php?fu=2")) {
+        localStorage["ownImperium:"+gameSId()] = player;
+      } 
     }
-    localStorage["rassen:"+gameSId()] = rassen.toSource();
+    localStorage["rassen:"+gameSId()] =  JSON.stringify(rassen);
+  }
+} else if (islocation("uebersicht_neuigkeiten","1")) {
+  ////////////////////////////////////////////////////////////////////
+  //NEUIGKEITEN
+  /////////////////////////////////////////////////////////////////////
+  skrupelhack = function() {
+    var rassen = localStorageGetData("rassen:"+gameSId());
+    if (!rassen) { 
+      //var ifr = document.createElement("iframe");
+      ifr.src = window.location.href.replace("neuigkeiten", "imperien");
+      ifr.style.display="none";
+      document.appendChild(ifr);
+      return; 
+    }
+    var ownImperiumIndex = localStorage["ownImperium:"+gameSId()];
+    if (!ownImperiumIndex) { alert("Don't know own race"); return; }
+    var meta = localStorageGetData("Rasse:"+rassen[ownImperiumIndex]+":meta");
+    if (!meta) { alert("Unbekannte rasse: "+rassen[ownImperiumIndex]+"\nÖffne die Übersicht über das entsprechende Volk"); return; }
+    var trs = document.getElementsByTagName("table")[0].rows;
+    var tempregex = /Wir haben die Temperatur des Planeten ([^ ]+) erfolgreich um ([0-9]+) Grad auf (-?[0-9]+) Grad (gesenkt|erhöht)/;
+    var deltas = {}; var lasttemp = {};
+    for (var i=1;i<trs.length;i+=2) {
+      var cur = tempregex.exec(trs[i].cells[1].textContent);
+     // alert((trs[i].cells[1].textContent));
+      if (!cur) continue;
+      if (!(cur[1] in lasttemp)) lasttemp[cur[1]] = cur[3]*1;
+      var sign = 1;
+      if (cur[4] == "gesenkt") sign = -1; else if (cur[4] != "erhöht") alert("??"+trs[i].cells[1]);
+      if (!deltas[cur[1]]) deltas[cur[1]] = sign*cur[2];
+      else deltas[cur[1]] += sign*cur[2];
+    }
+    var opttemp = meta.temperature;
+
+    for (var i=1;i<trs.length;i+=2) {
+      var cur = tempregex.exec(trs[i].cells[1].textContent);
+      if (!cur) continue;
+      var next = deltas[cur[1]] + lasttemp[cur[1]];
+      trs[i].cells[1].textContent = "Wir haben die Temperatur des Planeten " + cur[1] + " erfolgreich um " + cur[2] + " ("+deltas[cur[1]]+") Grad auf " + cur[3] + " (" + lasttemp[cur[1]]+ ") Grad " + cur[4] + ((deltas[cur[1]] != 1 && deltas[cur[1]] != -1) ? (" (Nächster Zug: "+(deltas[cur[1]]+ lasttemp[cur[1]])+") ") : "") ;
+      if ((next > opttemp && deltas[cur[1]] > 0) || 
+          (next < opttemp && deltas[cur[1]] < 0) ) trs[i].style.backgroundColor = "#880000";
+    }
   }
 } else if (islocation("planeten_gamma", "4")) {
   ////////////////////////////////////////////////////////////////////
@@ -1522,8 +1564,8 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
 if (skrupelhack) {
   var injectJS = document.createElement("script");
   var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
-  injectJS.innerHTML = ( is_chrome ? libraryinit : libraryinit.toSource()) + 
-                        "var skrupelhack = "+ ( is_chrome ? skrupelhack : skrupelhack.toSource() )+";"+                       "libraryinit(); " + // " window.setTimeout = function(a,b){alert('timeout.'+a+':'+b);}; window.setInterval = function(a,b){alert('interval.'+a+':'+b);};"
+  injectJS.innerHTML = ( is_chrome ? libraryinit : libraryinit.toString()) + 
+                        "var skrupelhack = "+ ( is_chrome ? skrupelhack : skrupelhack.toString() )+";"+                       "libraryinit(); " + // " window.setTimeout = function(a,b){alert('timeout.'+a+':'+b);}; window.setInterval = function(a,b){alert('interval.'+a+':'+b);};"
                        "setTimeout(skrupelhack(), 50); " ;
   var jq = document.createElement("script");
   jq.type="text/javascript";
