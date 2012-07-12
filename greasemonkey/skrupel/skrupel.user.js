@@ -1395,9 +1395,9 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
       }
       
       var as = document.getElementsByTagName("a");
-      var sfb = "["+ searchfor + "]";
+      var sfb = "["+ searchfor.toLowerCase() + "]";
       for (var i=0;i<as.length;i++) {
-        if (as[i].onmouseover && as[i].onmouseover.toString().contains(sfb)) {
+        if (as[i].onmouseover && as[i].onmouseover.toString().toLowerCase().contains(sfb)) {
           var x = /linieplanet[(] *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toString());
           if (!x)  x = /takeship[(][0-9]+, *[0-9]+, *[0-9]+, *([0-9]+) *, ([0-9]+)*/.exec(as[i].onclick.toString());
           movemap(x[1]*1, x[2]*1);
