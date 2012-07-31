@@ -226,6 +226,7 @@ if (islocation("flotte_beta","1")) {
     var inPlanet = false; 
     var planetInfos; var lastName; var value;
     var sid = gameSId();
+    var numbering = 1;
     for (var i=0;i<tds.length;i++) {
       if (tds[i].firstChild && ((tds[i].firstChild.nodeType == 3 && tds[i].childNodes.length == 1) || (inPlanet && tds[i].firstChild.nodeType == 1 && tds[i].firstChild.nodeName == "A"))) {
         if (tds[i].textContent == "Name") { 
@@ -244,7 +245,11 @@ if (islocation("flotte_beta","1")) {
           autoDetailScan(temp[1], planetInfos["Name"].textContent);
         } else {
           temp = /shid=([0-9]+)/.exec(tds[i].firstChild.action);
-          if (temp) autoDetailScan(temp[1]);
+          if (temp) { 
+            autoDetailScan(temp[1]); 
+            tds[i+1].getElementsByTagName("input")[0].value = "Detailscan "+numbering; 
+            numbering += 1;
+          }
         }
       } 
     }
@@ -1509,7 +1514,7 @@ window.bbCreateElementWithClick = function(el, clickevent, attribs){
     var meta = localStorageGetData("Rasse:"+rassen[ownImperiumIndex]+":meta");
     if (!meta) { alert("Unbekannte rasse: "+rassen[ownImperiumIndex]+"\nÖffne die Übersicht über das entsprechende Volk"); return; }
     var trs = document.getElementsByTagName("table")[0].rows;
-    var tempregex = /Wir haben die Temperatur des Planeten ([^ ]+) erfolgreich um ([0-9]+) Grad auf (-?[0-9]+) Grad (gesenkt|erhöht)/;
+    var tempregex = /Wir haben die Temperatur des Planeten (.+) erfolgreich um ([0-9]+) Grad auf (-?[0-9]+) Grad (gesenkt|erhöht)/;
     var deltas = {}; var lasttemp = {};
     for (var i=1;i<trs.length;i+=2) {
       var cur = tempregex.exec(trs[i].cells[1].textContent);
