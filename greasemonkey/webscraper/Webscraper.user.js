@@ -46,6 +46,7 @@ makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
                "right: 10px; top: 10px; " +
                "border: 1px solid gray; " +
                "background-color: white; "+ 
+               "color: black;" +
                "padding: 2px;"+
                "z-index: 100000",
         id: prf + "main"
