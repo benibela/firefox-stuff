@@ -37,7 +37,7 @@ makeinput('Excluded ids', "idsexcl", ".*[0-9].*")+
 makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
 '</table>'+
 '<hr>Resulting template: <br>' +
-'  <textarea style="width: 20em; height:10em; resize: both" id="'+prf+'template">waiting for selection</textarea>'+
+'  <textarea style="width: 20em; height:10em; resize: both; width: 100%" id="'+prf+'template">waiting for selection</textarea>'+
 '</div>'
       );
     
