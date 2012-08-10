@@ -220,6 +220,7 @@ function addSelectionToTemplate(){
          s.focusNode.classList && s.focusNode.classList.contains(prf+"templateRead")) || $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead, "+prfid+"main").length != 0) return;*/
 
   if ($(s.anchorNode).add(s.focusNode).parents(prfid+"main").length != 0) return; 
+  if ($(s.anchorNode).add(s.focusNode).parents("."+prf+"read_options").length != 0) return; 
 
   var r = s.getRangeAt(0);
   if (!r) return;
@@ -391,8 +392,16 @@ function addSelectionToTemplate(){
     }   
      
     function spanner(n){ return $("<span/>", {style: "display: table-cell"}).append(n); }
-    function maketinyedit(c, info){return $("<input/>", {class: c, title: info, change: regenerateTemplate, keyup: regenerateTemplate  });};
+    function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplate; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky  });};
        
+       
+    function varnameChanged(){
+      var p = $(this).parents("."+prf+"templateRead");
+      var value = p.find("."+prf+"read_var").val();
+      if (p.find("."+prf+"read_optional").is(':checked')) value += "?";
+      p.find("."+prf+"read_options_pre").text(value);
+      regenerateTemplate();
+    }
    
     if ($(templateRead).width() < 90) width = "40px";
     else width = "100%";
@@ -405,10 +414,16 @@ function addSelectionToTemplate(){
           text: "",
           class: prf+"read_options_hide"
          })).append(
-           $("<div/>", {style: "display: table-row"})
-             .append(spanner(maketinyedit(prf+"read_var", "Variable name")))
-             .append(spanner().text(":="))
-             .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
+           $("<div/>", {style: "display: table"})
+           .append(
+             $("<div/>", {style: "display: table-row"})
+               .append(spanner(maketinyedit(prf+"read_var", "Variable name", varnameChanged)))
+               .append(spanner().text(":="))
+               .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
+           ).add($("<div/>", {})
+             .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged}))
+             .append("optional")
+           )
        )
     ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
   }
@@ -446,6 +461,7 @@ function addSelectionToTemplate(){
 //  if (templateRead.parentNode.parentNode) removeEmptyTextNodesChildNodes(templateRead.parentNode.parentNode);
   */
   regenerateTemplate();
+  window.getSelection().collapseToStart();
 }
 
 function regenerateTemplate(){
@@ -486,6 +502,9 @@ function regenerateTemplate(){
     var useSiblings = false;
     var fullSpecificied = true;
     var hasReadTag = false;
+    var allOptional = true;
+    var hasOptional = false;
+    var optionals = new Array();
     for (i=0;i<kids.length;i++) {
       if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
       var t;
@@ -504,20 +523,30 @@ function regenerateTemplate(){
         if (noTextNodes) t += "}";
         else t += "</t:s>";
         fullSpecificied  = false;
+        
+        res.push(t);
+        var optional = $("."+prf+"read_optional", kids[i]).is(':checked');
+        allOptional = allOptional && optional;
+        hasOptional = hasOptional || optional;
+        optionals.push(optional);
+        foundSomething = i;
       } else { 
-        var specific;  
         var x = regenerateTemplateRec(kids[i]); 
         t = x[0];
-        specific = x[1];
-        if (t != "" && !specific) fullSpecificied = false; 
-        
+        if (t == "") res.push(kids[i]);
+        else {
+          if ( !x[1]) fullSpecificied = false; 
+          allOptional = allOptional && x[2];
+          hasOptional = hasOptional || x[2];
+          optionals.push(x[2]);
+          res.push(t);
+          foundSomething = i;
+        }
       }
-      if (t == "") res.push(kids[i]);
-      else { res.push(t); foundSomething = i;  }
     }
     
-    if (foundSomething == -1) return ["",false];
-    
+    if (foundSomething == -1) return ["",false,false];
+
     if (!fullSpecificied) useSiblings = true;
     
     if (siblingsinclmode == 0) useSiblings = true;
@@ -533,9 +562,15 @@ function regenerateTemplate(){
         becameSpecific = true;
       if ((useSiblings && foundSomething > 0) || !hasReadTag) res2 += "\n";
     }
+    var p = 0;
     for (var i=0;i<=foundSomething;i++) {
-      if ((typeof res[i]) == "string") res2 += res[i];
-      else if (useSiblings) {
+      if ((typeof res[i]) == "string") {
+        if (hasOptional && !allOptional && optionals[p]) 
+          res2 += res[i].replace(/([^/])>/, '$1 t:optional="true">') //TODO fix it for multiple childrens
+        else 
+          res2 += res[i];
+        p+=1;
+      } else if (useSiblings) {
         if ( res[i].nodeType != Node.TEXT_NODE) {
           var temp = encodeNodeTags(res[i], true);
           res2 += temp;
@@ -549,11 +584,14 @@ function regenerateTemplate(){
     }
     if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
     
-    return [res2, fullSpecificied || becameSpecific];
+    return [res2, fullSpecificied || becameSpecific, allOptional];
   }
   
+  var res = regenerateTemplateRec(document.body);
   
-  $(prfid + "template").text( regenerateTemplateRec(document.body)[0]);
+  if (res[2]) res[0] = res[0].replace(/([^/])>/, '$1 t:optional="true">') //everything is optional
+  
+  $(prfid + "template").text( res[0] );
 }
 
 
