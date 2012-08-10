@@ -35,9 +35,9 @@ function activateScraper(){
 '<b>Select the values you want to extract on the site</b><br><hr>' + 
 '<table>' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
-makeinput('Excluded tags', "tagsexcl", "tbody|p")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*")+
 makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
+makeinput('Excluded default tags', "tagsexcl", "tbody|p")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
 '<hr>Resulting template: <br>' +
@@ -276,6 +276,7 @@ function addSelectionToTemplate(){
   if (!common) alert("failed to find common parent");
   if (ai >= bi) return;
   
+  var templateRead;
   if (common.nodeType != Node.TEXT_NODE) {
     bi -= removeWhileEmptyTextNode(common.childNodes[ai]);
     bi -= removeWhileEmptyTextNode(common.childNodes[bi-1]);
@@ -304,7 +305,7 @@ function addSelectionToTemplate(){
         if (n.classList && n.classList.contains(prf+"templateRead")) 
           removeNodeButKeepChildren(n);           
       })
-    var templateRead = myCreate("div", {"class": prf + "templateRead"});
+    templateRead = myCreate("div", {"class": prf + "templateRead"});
     common.insertBefore(templateRead, common.childNodes[ai]);
     for (var i=ai;i<bi;i++)
       templateRead.appendChild(common.childNodes[ai+1]);
@@ -338,7 +339,7 @@ function addSelectionToTemplate(){
   } else {
     var prefix = common.nodeValue.substring(0,ai);
     var s = common.nodeValue.substring(ai, bi);
-    var templateRead = myCreate("div", {"class": prf + "templateRead"});
+    templateRead = myCreate("div", {"class": prf + "templateRead"});
     templateRead.textContent = s;
     var suffix = common.nodeValue.substring(bi);
 
@@ -346,6 +347,11 @@ function addSelectionToTemplate(){
     common.parentNode.insertBefore(templateRead, common);
     common.textContent = suffix;
   }
+  
+  if (templateRead)
+    enumerate(templateRead.parentNode, function(n){
+      removeEmptyTextNodesChildNodes(n);
+    });
   /*
   var cur = ex;
   removeEmptyTextNodesChildNodes(cur);
@@ -465,13 +471,13 @@ function regenerateTemplate(){
     
 //    console.log(res);
     var becameSpecific = false;
-    var ignoreTag = tagsexcl.test(cur.nodeName);
+    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);
     var res2 = "";
     if (!ignoreTag) {
       res2 += encodeNodeTags(cur);
       if (res2.indexOf("=") > 0 && (cur.hasAttribute("id") || (cur.nodeName != "TD" && cur.nodeName != "TR")))
         becameSpecific = true;
-      if (useSiblings || !hasReadTag) res2 += "\n";
+      if ((useSiblings && foundSomething > 0) || !hasReadTag) res2 += "\n";
     }
     for (var i=0;i<=foundSomething;i++) {
       if ((typeof res[i]) == "string") res2 += res[i];
