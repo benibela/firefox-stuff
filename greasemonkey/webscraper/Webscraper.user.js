@@ -192,7 +192,7 @@ function previousNode(e){
 
 
 function addSelectionToTemplate(){
-  if (!Node.TEXT_NODE) alert("initialization failed");
+  if (!Node.TEXT_NODE) alert("initialization failed");  
   
   var s = window.getSelection();
   
@@ -414,6 +414,7 @@ function regenerateTemplate(){
     var useSiblings = false;
     var hasReadTag = false;
     for (i=0;i<kids.length;i++) {
+      if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
       var t;
       if (kids[i].className == prf+"templateRead") {
         hasReadTag = true;
