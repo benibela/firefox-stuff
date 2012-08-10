@@ -35,8 +35,8 @@ function activateScraper(){
 '<b>Select the values you want to extract on the site</b><br><hr>' + 
 '<table>' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
-makeinput('Excluded ids', "idsexcl", ".*[0-9].*")+
-makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
+makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
+makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*|"+prf+".*")+
 makeinput('Excluded default tags', "tagsexcl", "tbody|p")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
@@ -93,7 +93,18 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             
       $("head").append($(
 '<style>'+ 
- '.'+prf+ 'templateRead { border: 2px solid #FF00FF; display: inline-block }' +      //text-decoration: line-through; 
+ '.'+prf+ 'templateRead { border: 2px solid #FF00FF; display: inline-block}' +      //text-decoration: line-through;  
+ '.'+prf+'read_options_hide {font-size:75%; border: 1px dashed; display: none; width: 100%; padding-right: 7px}'+
+ '.'+prf+'templateRead:hover .'+prf+'read_options_hide{display: table}'+
+ '.'+prf+'templateRead .'+prf+'read_options_pre{display: inline; background-color: #FF00FF}'+ 
+ '.'+prf+'templateRead:hover .'+prf+'read_options_pre{display: none}'+ 
+ '.'+prf+'read_options {display: inline}'+ 
+// '.'+prf+'read_options:hover {display: block}'+ 
+ '.'+prf+'read_var {width: 40px}'+
+ '.'+prf+'read_source {width: 100%}'+
+
+ '#'+prf+'main table {width: 100%}'+
+ '#'+prf+'main input {width: 100%}'+
 '</style>'));
       
       var mouseUpActivated = false;
@@ -179,8 +190,12 @@ function removeEmptyTextNodesChildNodes(e){
 function removeNodeButKeepChildren(n){
   var cn = n.childNodes;
   var p = n.parentNode;
-  while (cn.length > 0)
-    p.insertBefore(cn[0], n);
+  while (cn.length > 0){
+    if (cn[0].classList && cn[0].classList.contains(prf+"read_options")) 
+      n.removeChild(cn[0]);
+     else
+      p.insertBefore(cn[0], n);
+  }
   p.removeChild(n);
 }
 
@@ -348,10 +363,55 @@ function addSelectionToTemplate(){
     common.textContent = suffix;
   }
   
-  if (templateRead)
+  if (templateRead) {
     enumerate(templateRead.parentNode, function(n){
       removeEmptyTextNodesChildNodes(n);
     });
+   
+
+    var value = "";
+ 
+    //same vars as in regenerateTemplate
+    var cur = templateRead.parentNode;
+    var kids = cur.childNodes;
+    var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
+    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);       
+    var i = indexOfNode(kids, templateRead);
+    
+    if (!ignoreTag && kids.length == 1) value = ".";
+    else if (ignoreTag && cur.parentNode.childNodes.length == 1) value = ".";
+    else if (kids[i].childNodes.length == 1 && kids[i].childNodes[0].nodeType == Node.TEXT_NODE) {
+      //only read text
+      var prefix = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i-1].nodeValue.trimLeft());
+      var suffix = (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i+1].nodeValue).trimRight();
+      if (prefix == "" && suffix == "") value = "text()";
+      else value = "filter(text(), \""+prefix+"(.*)"+suffix+"\", 1)";
+    } else {
+      value = ".";
+    }   
+     
+    function spanner(n){ return $("<span/>", {style: "display: table-cell"}).append(n); }
+    function maketinyedit(c, info){return $("<input/>", {class: c, title: info, change: regenerateTemplate, keyup: regenerateTemplate  });};
+       
+   
+    if ($(templateRead).width() < 90) width = "40px";
+    else width = "100%";
+   
+    $('<span/>', {
+      text: "",
+      class: prf+"read_options_pre"
+    }).add(
+      ($('<div/>', {
+          text: "",
+          class: prf+"read_options_hide"
+         })).append(
+           $("<div/>", {style: "display: table-row"})
+             .append(spanner(maketinyedit(prf+"read_var", "Variable name")))
+             .append(spanner().text(":="))
+             .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
+       )
+    ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
+  }
   /*
   var cur = ex;
   removeEmptyTextNodesChildNodes(cur);
@@ -436,16 +496,10 @@ function regenerateTemplate(){
         if (noTextNodes) t = "{";
         else { t = "<t:s>"; useSiblings = true; }
         
-        if (kids.length == 1) t += ".";
-        else if (kids[i].childNodes.length == 1 && kids[i].childNodes[0].nodeType == Node.TEXT_NODE) {
-          //only read text
-          var prefix = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i-1].nodeValue.trimLeft());
-          var suffix = (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i+1].nodeValue).trimRight();
-          if (prefix == "" && suffix == "") t += "text()";
-          else t += "filter(text(), \""+prefix+"(.*)"+suffix+"\", 1)";
-        } else {
-          t += ".";
-        }
+        var name = $("." + prf + "read_var", kids[i]).val();
+        if (name != "") t += name + " := ";
+        
+        t += $("." + prf + "read_source", kids[i]).val();;
         
         if (noTextNodes) t += "}";
         else t += "</t:s>";
@@ -471,8 +525,8 @@ function regenerateTemplate(){
     
 //    console.log(res);
     var becameSpecific = false;
-    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);
     var res2 = "";
+    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);    
     if (!ignoreTag) {
       res2 += encodeNodeTags(cur);
       if (res2.indexOf("=") > 0 && (cur.hasAttribute("id") || (cur.nodeName != "TD" && cur.nodeName != "TR")))
