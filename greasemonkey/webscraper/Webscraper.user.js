@@ -191,12 +191,30 @@ function previousNode(e){
 function addSelectionToTemplate(){
   var s = window.getSelection();
   
-  if (( s.anchorNode.classList && s.anchorNode.classList.contains(prf+"templateRead") &&
-         s.focusNode.classList && s.focusNode.classList.contains(prf+"templateRead")) || $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead, "+prfid+"main").length != 0) return;
+  /*if (( s.anchorNode.classList && s.anchorNode.classList.contains(prf+"templateRead") &&
+         s.focusNode.classList && s.focusNode.classList.contains(prf+"templateRead")) || $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead, "+prfid+"main").length != 0) return;*/
+
+  if ($(s.anchorNode).add(s.focusNode).parents(prfid+"main").length != 0) return; 
+
   var r = s.getRangeAt(0);
   if (!r) return;
   
   var start = r.startContainer, end = r.endContainer, startOffset = r.startOffset, endOffset = r.endOffset;
+
+  if (start.classList && start.classList.contains(prf+"templateRead")) {
+    var temp = start.parentNode;
+    removeNodeButKeepChildren(start);
+    start = temp;
+  }
+  if (end.classList  && end.classList.contains(prf+"templateRead")) {
+    var temp = end.parentNode;
+    removeNodeButKeepChildren(end);
+    end = temp;
+  }
+  $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead").each(
+    function(i,n){removeNodeButKeepChildren(n);}
+  );
+    
   
   if (start == end && endOffset <= startOffset) return;
   
@@ -268,6 +286,7 @@ function addSelectionToTemplate(){
 
     if (bi + 1 <= common.childNodes.length && common.childNodes[bi].nodeType == Node.TEXT_NODE) 
       bi++; //prevent inclusion of the next element in the read tag, but still allow partial text inclusion (todo: check if this is correct)
+
     for (var i=bi-1; i >= ai; i--) 
       enumerate(common.childNodes[i], function(n){ 
         if (n.classList && n.classList.contains(prf+"templateRead")) 
@@ -278,22 +297,24 @@ function addSelectionToTemplate(){
     for (var i=ai;i<bi;i++)
       templateRead.appendChild(common.childNodes[ai+1]);
 
+
     //split text nodes
     if (start.nodeType == Node.TEXT_NODE && startOffset != 0)  {
       var prefix = start.nodeValue.substring(0,startOffset);
       start.textContent = start.nodeValue.substring(startOffset);
       templateRead.parentNode.insertBefore(document.createTextNode(prefix), templateRead);
     }
-    //alert(end+":"+end.nodeValue);
+
     if (end.nodeType == Node.TEXT_NODE && endOffset < end.nodeValue.length)  {
       var suffix = end.nodeValue.substring(endOffset);
       end.textContent = end.nodeValue.substring(0,endOffset);
       if (templateRead.parentNode.lastChild == templateRead)
         templateRead.parentNode.appendChild(document.createTextNode(suffix));
-      else
-        templateRead.parentNode.insertBefore(document.createTextNode(suffix), templateRead.followingSibling);
+      else {
+        templateRead.parentNode.insertBefore(document.createTextNode(suffix), templateRead.nextSibling);
+      }
     }
-      
+    
     //get rid of duplicated text nodes
     enumerate(templateRead.parentNode, function(n){
       for (var i=n.childNodes.length-1;i>0;i--)
