@@ -378,10 +378,10 @@ function addSelectionToTemplate(){
 }
 
 function regenerateTemplate(){
-  var attribs = new RegExp("^("+$(prfid + "attribs").val()+")$");
-  var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$");
-  var idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$");
-  var classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$");
+  var attribs = new RegExp("^("+$(prfid + "attribs").val()+")$", "i");
+  var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
+  var idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$", "i");
+  var classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$", "i");
 
   function encodeNodeTags(node, close){
   if (!node) return "??";
@@ -443,8 +443,12 @@ function regenerateTemplate(){
     
     if (!foundSomething) return "";
 //    console.log(res);
-    var res2 = encodeNodeTags(cur);
-    if (useSiblings || !hasReadTag) res2 += "\n";
+    var ignoreTag = tagsexcl.test(cur.nodeName);
+    var res2 = "";
+    if (!ignoreTag) {
+      res2 += encodeNodeTags(cur);
+      if (useSiblings || !hasReadTag) res2 += "\n";
+    }
     for (var i=0;i<res.length;i++) {
       if ((typeof res[i]) == "string") res2 += res[i];
       else if (useSiblings) {
@@ -454,7 +458,7 @@ function regenerateTemplate(){
           res2 += res[i].textContent.trim();
       }
     }
-    res2 += "</"+cur.nodeName+">\n";
+    if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
     
     return res2;
   }
