@@ -23,6 +23,9 @@ $("<div/>",{
 var mainInterface = null;
 
 function makeinput(caption, id, value){ return '<tr><td>'+caption+':</td><td><input id="'+prf+id+'"'+(value?'value="'+value+'"':"")+'/></td></tr>'; }
+function makeselect(caption, id, values, def){ 
+  if (!def) def = 0;
+  return '<tr><td>'+caption+':</td><td><select style="width:100%" id="'+prf+id+'">'+ values.map ( function(e, i) { return '<option value="'+i+'"'+(def == i ? " selected" : "")+'>'+e+'</option>'} ) + '</select></td></tr>'; }
 
 function activateScraper(){ 
   if (!mainInterface || mainInterface.css("display") == "none") {
@@ -35,6 +38,7 @@ makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded tags', "tagsexcl", "tbody|p")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*")+
 makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
+makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
 '<hr>Resulting template: <br>' +
 '  <textarea style="width: 20em; height:10em; resize: both; width: 100%" id="'+prf+'template">waiting for selection</textarea>'+
@@ -383,6 +387,7 @@ function regenerateTemplate(){
   var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
   var idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$", "i");
   var classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$", "i");
+  var siblingsinclmode = $(prfid+"siblings").val();
 
   function encodeNodeTags(node, close){
   if (!node) return "??";
@@ -410,9 +415,10 @@ function regenerateTemplate(){
   function regenerateTemplateRec(cur){
     var kids = cur.childNodes;
     var res = new Array();
-    var foundSomething = false;
+    var foundSomething = -1;
     var i = 0;
     var useSiblings = false;
+    var fullSpecificied = true;
     var hasReadTag = false;
     for (i=0;i<kids.length;i++) {
       if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
@@ -437,35 +443,57 @@ function regenerateTemplate(){
         
         if (noTextNodes) t += "}";
         else t += "</t:s>";
-      } else { t = regenerateTemplateRec(kids[i]); }
+        fullSpecificied  = false;
+      } else { 
+        var specific;  
+        var x = regenerateTemplateRec(kids[i]); 
+        t = x[0];
+        specific = x[1];
+        if (t != "" && !specific) fullSpecificied = false; 
+        
+      }
       if (t == "") res.push(kids[i]);
-      else { res.push(t); foundSomething = true; }
+      else { res.push(t); foundSomething = i;  }
     }
     
-    if (!foundSomething) return "";
+    if (foundSomething == -1) return ["",false];
+    
+    if (!fullSpecificied) useSiblings = true;
+    
+    if (siblingsinclmode == 0) useSiblings = true;
+    if (siblingsinclmode == 2) useSiblings = false;
+    
 //    console.log(res);
+    var becameSpecific = false;
     var ignoreTag = tagsexcl.test(cur.nodeName);
     var res2 = "";
     if (!ignoreTag) {
       res2 += encodeNodeTags(cur);
+      if (res2.indexOf("=") > 0 && (cur.hasAttribute("id") || (cur.nodeName != "TD" && cur.nodeName != "TR")))
+        becameSpecific = true;
       if (useSiblings || !hasReadTag) res2 += "\n";
     }
-    for (var i=0;i<res.length;i++) {
+    for (var i=0;i<=foundSomething;i++) {
       if ((typeof res[i]) == "string") res2 += res[i];
       else if (useSiblings) {
-        if ( res[i].nodeType != Node.TEXT_NODE) 
-          res2 += encodeNodeTags(res[i], true);
-        else if (i == 0 || typeof res[i-1] != "string")  //don't add following text nodes, they wouldn't be matched
-          res2 += res[i].textContent.trim();
+        if ( res[i].nodeType != Node.TEXT_NODE) {
+          var temp = encodeNodeTags(res[i], true);
+          res2 += temp;
+          if (temp.indexOf("=") > 0) becameSpecific = true;
+        } else if (i == 0 || typeof res[i-1] != "string"){  //don't add following text nodes, they wouldn't be matched
+          var temp = res[i].textContent.trim();
+          res2 += temp;
+          if (temp != "") becameSpecific = true;
+        }
       }
     }
     if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
     
-    return res2;
+    return [res2, fullSpecificied || becameSpecific];
   }
   
   
-  $(prfid + "template").text( regenerateTemplateRec(document.body));
+  $(prfid + "template").text( regenerateTemplateRec(document.body)[0]);
 }
 
 
