@@ -52,17 +52,20 @@ makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
       });
       mainInterface.appendTo("body");
       
+      function moveLeft(){
+        $(prfid + "moveleft").hide();
+        $(prfid + "moveright").show();
+        mainInterface.css("right", "");
+        mainInterface.css("left", "10px");
+        localStorage[prf+"guiposition"] = "left";
+      }
+      
       var harness = $('<div/>', {style:"border:none"})
         .append($("<a/>", {
            text: "<<", 
            id: prf + "moveleft",
            style: "border: 1px solid black; cursor: pointer", 
-           click: function(){ 
-             $(prfid + "moveleft").hide();
-             $(prfid + "moveright").show();
-             mainInterface.css("right", "");
-             mainInterface.css("left", "10px");
-           } }))
+           click: moveLeft }))
         .append($("<a/>", {
            text: ">>", 
            id: prf + "moveright",
@@ -72,6 +75,7 @@ makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
              $(prfid + "moveright").hide();
              mainInterface.css("right", "10px");
              mainInterface.css("left", "");
+             localStorage[prf+"guiposition"] = "right";
            } }))
         .append($("<a/>", {
            text: "X", 
@@ -98,15 +102,14 @@ makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*")+
       });
       
       
-      
-      
       if (!Node.ELEMENT_NODE) Node.ELEMENT_NODE = 1;
       if (!Node.TEXT_NODE) Node.TEXT_NODE = 3;
       
       RegExp.escape = function(text) {
           return text.replace(/[-[\]{}()*+?.,\\^$|#]/g, "\\$&");
       } //by Colin Snover
-      
+
+      if (localStorage[prf+"guiposition"] == "left") moveLeft(); //  $( prfid + "moveleft").click(); works, but then causes an exception :(
     } else mainInterface.show();
     $(prfid+"activation").hide();
     
@@ -189,6 +192,8 @@ function previousNode(e){
 
 
 function addSelectionToTemplate(){
+  if (!Node.TEXT_NODE) alert("initialization failed");
+  
   var s = window.getSelection();
   
   /*if (( s.anchorNode.classList && s.anchorNode.classList.contains(prf+"templateRead") &&
@@ -218,6 +223,7 @@ function addSelectionToTemplate(){
   
   if (start == end && endOffset <= startOffset) return;
   
+//  alert(start+" "+end+" "+startOffset + " "+endOffset)
   //reimplementation of surroundContents, except the inserted element is moved down as far as possible in the hierarchie
   
   //remove useless (text) nodes
@@ -236,6 +242,7 @@ function addSelectionToTemplate(){
   //find common ancestor
   var common;
   var a = start, b = end, ai = startOffset, bi = endOffset;
+
   if (a == b) common = a;
   else {
     var aparents = new Array(); var bparents = new Array();
@@ -250,7 +257,7 @@ function addSelectionToTemplate(){
         a = a.parentNode;
       }
       if (b != null){
-        bi = indexOfNode(b.parentNode.childNodes, b);
+        bi = indexOfNode(b.parentNode.childNodes, b) + 1;
         if (aparents.indexOf(b.parentNode) >= 0) { common = b.parentNode; ai = aindices[aparents.indexOf(common)]; break; }
         b = b.parentNode;
       }
@@ -284,8 +291,8 @@ function addSelectionToTemplate(){
       if (ai >= bi) return;
     }
 
-    if (bi + 1 <= common.childNodes.length && common.childNodes[bi].nodeType == Node.TEXT_NODE) 
-      bi++; //prevent inclusion of the next element in the read tag, but still allow partial text inclusion (todo: check if this is correct)
+    //if (bi + 1 <= common.childNodes.length)// && common.childNodes[bi].nodeType == Node.TEXT_NODE) 
+    //  bi++; //prevent inclusion of the next element in the read tag, but still allow partial text inclusion (todo: check if this is correct)
 
     for (var i=bi-1; i >= ai; i--) 
       enumerate(common.childNodes[i], function(n){ 
@@ -297,7 +304,7 @@ function addSelectionToTemplate(){
     for (var i=ai;i<bi;i++)
       templateRead.appendChild(common.childNodes[ai+1]);
 
-
+  //alert(a+" "+b+" "+ai + " "+bi)
     //split text nodes
     if (start.nodeType == Node.TEXT_NODE && startOffset != 0)  {
       var prefix = start.nodeValue.substring(0,startOffset);
