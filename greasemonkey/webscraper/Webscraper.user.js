@@ -105,6 +105,10 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 
  '#'+prf+'main table {width: 100%}'+
  '#'+prf+'main input {width: 100%}'+
+
+
+ '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
+ '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 '</style>'));
       
       var mouseUpActivated = false;
@@ -191,9 +195,10 @@ function removeNodeButKeepChildren(n){
   var cn = n.childNodes;
   var p = n.parentNode;
   while (cn.length > 0){
-    if (cn[0].classList && cn[0].classList.contains(prf+"read_options")) 
+    if (cn[0].classList && cn[0].classList.contains(prf+"read_options"))  {
+      if (cn[0] == window.searchingRepetition) window.searchingRepetition = null;
       n.removeChild(cn[0]);
-     else
+     } else
       p.insertBefore(cn[0], n);
   }
   p.removeChild(n);
@@ -368,6 +373,10 @@ function addSelectionToTemplate(){
     enumerate(templateRead.parentNode, function(n){
       removeEmptyTextNodesChildNodes(n);
     });
+    
+    if (!window.runningId) window.runningId = 0;
+    window.runningId += 1;
+    templateRead.id = prf + "templateRead"+ window.runningId;
    
 
     var value = "";
@@ -393,6 +402,7 @@ function addSelectionToTemplate(){
      
     function spanner(n){ return $("<span/>", {style: "display: table-cell"}).append(n); }
     function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplate; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky  });};
+    function maketinybutton(c, info, clicky){ return $("<button/>", {class: c, text: info, click: clicky  });}; 
        
        
     function varnameChanged(){
@@ -402,15 +412,76 @@ function addSelectionToTemplate(){
       p.find("."+prf+"read_options_pre").text(value);
       regenerateTemplate();
     }
+    
+    function followLink(e){
+      var p = $(this).parents("."+prf+"templateRead");
+      p.find("."+prf+"read_optional").prop("checked", true);
+      p.find("."+prf+"read_var").val("_follow");
+      p.find("."+prf+"read_source").val("@href");
+      regenerateTemplate();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+    
+    function readRepetitions(p){
+      if (p.data(prf+"repetition")) 
+        removeNodeButKeepChildren(document.getElementById(p.data(prf+"repetition")));
+      
+      p.find("."+prf+"btnloop").text("select next occurence");
+      window.searchingRepetition = p;
+    }
+    
+    function addRepetition(from, to){
+      //assert  window.searchingRepetition == from
+      window.searchingRepetition = null;
+
+      to.addClass(prf+"templateReadRepetition")
+      from.find("."+prf+"btnloop").text("read repetitions");
+      from.data(prf+"repetition", to.attr("id"));
+      
+      //alert(from.get()  + " "+to.get());                                                                                   works (=> [object XrayWrapper [object HTMLDivElement]] [object XrayWrapper [object HTMLDivElement]])
+      //alert(from.get().parentNode  + " "+to.get().parentNode);                                                             does not work (=> undefined undefined)
+      //alert(document.getElementById(from.attr("id")).parentNode  + " "+document.getElementById(to.attr("id")).parentNode); works (=> [object XrayWrapper [object HTMLTableCellElement]] [object XrayWrapper [object HTMLTableCellElement]])
+      
+      
+      var highestMatchFrom = document.getElementById(from.attr("id")).parentNode;
+      var highestMatchTo =   document.getElementById(to.attr("id")).parentNode;
+      
+      if (highestMatchFrom == highestMatchTo) {
+        alert("Repetitions need to be in different html tags");
+        readRepetitions(from);
+        return;
+      }
+      
+      if (!fitElements(highestMatchFrom, highestMatchTo)) {
+        alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom) +" vs. "+encodeNodeTags(highestMatchTo)+"\nMake sure to select both occurences in the same way, and add mismatching attributes the ignore lists.");
+        readRepetitions(from);
+        return;
+      }
+      
+      while (highestMatchFrom.parentNode != highestMatchTo.parentNode && fitElements(highestMatchFrom.parentNode, highestMatchTo.parentNode)){
+        highestMatchFrom = highestMatchFrom.parentNode;
+        highestMatchTo = highestMatchTo.parentNode;
+      }
+      
+        
+      if (highestMatchFrom.classList) highestMatchFrom.classList.add(prf+"templateLoop");  
+      else highestMatchFrom.className = prf+"templateLoop";
+      
+      regenerateTemplate();
+      //from.css("border", "2px solid blue");
+    }
    
     if ($(templateRead).width() < 90) width = "40px";
     else width = "100%";
-   
+
     $('<span/>', {
       text: "",
       class: prf+"read_options_pre"
     }).add(
-      ($('<div/>', {
+      window.searchingRepetition ?  ( $("<span/>", {text: "repetition"}) )
+      :
+      (($('<div/>', {
           text: "",
           class: prf+"read_options_hide"
          })).append(
@@ -423,10 +494,16 @@ function addSelectionToTemplate(){
            ).add($("<div/>", {})
              .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged}))
              .append("optional")
+            // .append("<br/>")
+             .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
+             .append(maketinybutton(prf+"btnloop", "read repetitions", function(){readRepetitions($(this).parents("."+prf+"templateRead"));}))
            )
-       )
+       )) 
     ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
   }
+  
+  if (window.searchingRepetition) 
+    addRepetition(window.searchingRepetition, $(templateRead));
   /*
   var cur = ex;
   removeEmptyTextNodesChildNodes(cur);
@@ -464,35 +541,87 @@ function addSelectionToTemplate(){
   window.getSelection().collapseToStart();
 }
 
-function regenerateTemplate(){
-  var attribs = new RegExp("^("+$(prfid + "attribs").val()+")$", "i");
-  var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
-  var idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$", "i");
-  var classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$", "i");
-  var siblingsinclmode = $(prfid+"siblings").val();
+function updateRegexps(){
+  window.attribs = new RegExp("^("+$(prfid + "attribs").val()+")$", "i");
+  window.tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
+  window.idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$", "i");
+  window.classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$", "i");
+  window.siblingsinclmode = $(prfid+"siblings").val();
+}
 
-  function encodeNodeTags(node, close){
+function filterNodeAttributes(node){
+  var res = {};
+  var a = node.attributes;
+  if (a)
+    for (var i=0;i<node.attributes.length;i++)
+      if (attribs.test(a[i].name)) 
+        if (a[i].name == "id") {
+          if (!idsexcl.test(a[i].value)) 
+            result[a[i].name] = a[i].value;
+        } else if (a[i].name == "class") {
+          var cl = new Array();
+          for (var j=0;j<node.classList.length;j++)
+            if (!classesexcl.test(node.classList[j])) cl.push(node.classList[j]);
+          res["class"] = cl;
+        } else res[a[i].name] = a[i].value;
+    //if (node.attributes[i].name)
+  return res;
+}
+
+function fitElements(t, h){ //template vs. html element
+  if (t.nodeName != h.nodeName) return false;
+  var att = filterNodeAttributes(t);
+  
+  for (var a in att) 
+    if (a != "class") {
+      if (att[a] != h.attributes[a].value) return false;
+    } else {
+      var expectedClasses = att[a];
+      if (expectedClasses.length == 0) continue;
+      if (!h.classList) return false;
+      for (var i=0;i<expectedClasses.length;i++)
+        if (!h.classList.contains(expectedClasses[i])) 
+          return false;
+    }
+
+  return true;
+}
+
+function encodeNodeTags(node, close){
   if (!node) return "??";
-    var res = "<" + node.nodeName;
-    var a = node.attributes;
-    if (a)
-      for (var i=0;i<node.attributes.length;i++)
-        if (attribs.test(a[i].name)) 
-          if (a[i].name == "id") {
-            if (!idsexcl.test(a[i].value)) 
-              res = res + " id=\"" +a[i].value + "\"";
-          } else if (a[i].name == "class") {
-            var cl = new Array();
-            for (var j=0;j<node.classList.length;j++)
-              if (!classesexcl.test(node.classList[j])) cl.push(node.classList[j]);
-            if (cl.length > 0) 
-              res = res + " class=\"" + cl.join(" ") + "\""
-          } else res = res + " " + a[i].name + "=\"" +a[i].value + "\""
-      //if (node.attributes[i].name)
-    if (close) res += "/>\n";
-    else res += ">";
-    return res;
+  var res = "<" + node.nodeName;
+  var attr = filterNodeAttributes(node);
+  if (attr)
+    for (var i in attr)
+      if (i != "class") res += " " + i + "=\""+attr[i]+"\"";
+      else res += " " + i + "=\""+attr[i].join(" ")+"\"";
+  if (close) res += "/>\n";
+  else res += ">";
+  return res;
+}
+
+/*function fitElements(n1, n2){
+  if (n1.nodeName != n2.nodeName) return false;
+  var a1 = filterNodeAttributes(n1);
+  var a2 = filterNodeAttributes(n2);
+  function cmp(b1, b2) {
+    for (var a in b1) 
+      if (a != "class") {
+        if (b1[a] != b2[a]) return false;
+      } else {
+        if (b1[a].split(" ").sort().join(" ") != 
+            b2[a].split(" ").sort().join(" "))
+          return false;
+      }
+    return true;
   }
+  
+  return cmp(a1, a2) && cmp(a2, a1);
+}*/
+
+function regenerateTemplate(){
+  updateRegexps();
+  
   
   function regenerateTemplateRec(cur){
     var kids = cur.childNodes;
@@ -508,7 +637,11 @@ function regenerateTemplate(){
     for (i=0;i<kids.length;i++) {
       if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
       var t;
-      if (kids[i].className == prf+"templateRead") {
+      if (kids[i].classList && kids[i].classList.contains(prf+"templateRead")) {
+        if (kids[i].classList.contains(prf+"templateReadRepetition")) {
+          res.push(null);
+          continue;
+        }
         hasReadTag = true;
         var noTextNodes = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE || kids[i-1].nodeValue.trim() == "" ) && 
                           (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE || kids[i+1].nodeValue.trim() == "" );
@@ -554,8 +687,13 @@ function regenerateTemplate(){
     
 //    console.log(res);
     var becameSpecific = false;
+    var looping = false;
     var res2 = "";
     var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);    
+    if (cur.classList && cur.classList.contains(prf+"templateLoop")) {
+      ignoreTag = false;
+      looping = true;
+    }
     if (!ignoreTag) {
       res2 += encodeNodeTags(cur);
       if (res2.indexOf("=") > 0 && (cur.hasAttribute("id") || (cur.nodeName != "TD" && cur.nodeName != "TR")))
@@ -564,6 +702,7 @@ function regenerateTemplate(){
     }
     var p = 0;
     for (var i=0;i<=foundSomething;i++) {
+      if (res[i] == null) continue;
       if ((typeof res[i]) == "string") {
         if (hasOptional && !allOptional && optionals[p]) 
           res2 += res[i].replace(/([^/])>/, '$1 t:optional="true">') //TODO fix it for multiple childrens
@@ -582,7 +721,10 @@ function regenerateTemplate(){
         }
       }
     }
-    if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
+    if (!ignoreTag) res2 += "</"+cur.nodeName+">";
+    
+    if (looping) res2 += "*";
+    else res2 += "\n";
     
     return [res2, fullSpecificied || becameSpecific, allOptional];
   }
@@ -601,7 +743,7 @@ Selection:
 
   No empty read tags!
 
-  No nested read tags (would be possible, but too confusing)
+  No nested read tags (would be possible, but too confusing)  
 
   Attribute white list id|class
   
