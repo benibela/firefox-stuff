@@ -423,12 +423,13 @@ function addSelectionToTemplate(){
       e.preventDefault();
     }
     
-    function readRepetitions(p){
+    function readRepetitions(e,p){
       if (p.data(prf+"repetition")) 
         removeNodeButKeepChildren(document.getElementById(p.data(prf+"repetition")));
       
       p.find("."+prf+"btnloop").text("select next occurence");
       window.searchingRepetition = p;
+      if (e) e.preventDefault();
     }
     
     function addRepetition(from, to){
@@ -449,13 +450,13 @@ function addSelectionToTemplate(){
       
       if (highestMatchFrom == highestMatchTo) {
         alert("Repetitions need to be in different html tags");
-        readRepetitions(from);
+        readRepetitions(null,from);
         return;
       }
       
       if (!fitElements(highestMatchFrom, highestMatchTo)) {
         alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom) +" vs. "+encodeNodeTags(highestMatchTo)+"\nMake sure to select both occurences in the same way, and add mismatching attributes the ignore lists.");
-        readRepetitions(from);
+        readRepetitions(null,from);
         return;
       }
       
@@ -496,7 +497,7 @@ function addSelectionToTemplate(){
              .append("optional")
             // .append("<br/>")
              .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
-             .append(maketinybutton(prf+"btnloop", "read repetitions", function(){readRepetitions($(this).parents("."+prf+"templateRead"));}))
+             .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead"));}))
            )
        )) 
     ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
@@ -557,7 +558,7 @@ function filterNodeAttributes(node){
       if (attribs.test(a[i].name)) 
         if (a[i].name == "id") {
           if (!idsexcl.test(a[i].value)) 
-            result[a[i].name] = a[i].value;
+            res[a[i].name] = a[i].value;
         } else if (a[i].name == "class") {
           var cl = new Array();
           for (var j=0;j<node.classList.length;j++)
@@ -721,10 +722,11 @@ function regenerateTemplate(){
         }
       }
     }
-    if (!ignoreTag) res2 += "</"+cur.nodeName+">";
-    
-    if (looping) res2 += "*";
-    else res2 += "\n";
+    if (!ignoreTag) {
+      res2 += "</"+cur.nodeName+">";
+      if (looping) res2 += "*";
+      res2 += "\n";
+    }
     
     return [res2, fullSpecificied || becameSpecific, allOptional];
   }
