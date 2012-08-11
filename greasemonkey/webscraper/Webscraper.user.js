@@ -695,6 +695,7 @@ function regenerateTemplate(){
     if (cur.classList && cur.classList.contains(prf+"templateLoop")) {
       ignoreTag = false;
       looping = true;
+      res2 += "<t:loop>\n";
     }
     if (!ignoreTag) {
       res2 += encodeNodeTags(cur);
@@ -723,11 +724,9 @@ function regenerateTemplate(){
         }
       }
     }
-    if (!ignoreTag) {
-      res2 += "</"+cur.nodeName+">";
-      if (looping) res2 += "*";
-      res2 += "\n";
-    }
+    if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
+
+    if (looping) res2 += "</t:loop>\n";
     
     return [res2, fullSpecificied || becameSpecific, allOptional];
   }
