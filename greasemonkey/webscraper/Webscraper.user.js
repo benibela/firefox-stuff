@@ -36,7 +36,7 @@ function activateScraper(){
 '<table>' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
-makeinput('Excluded classes', "classesexcl", "even|odd|selected|.*[0-9].*|"+prf+".*")+
+makeinput('Excluded classes', "classesexcl", "even|odd|.*select.*|.*highlight.*|.*[0-9].*|"+prf+".*")+
 makeinput('Excluded default tags', "tagsexcl", "tbody|p")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
@@ -570,6 +570,7 @@ function filterNodeAttributes(node){
 }
 
 function fitElements(t, h){ //template vs. html element
+//alert("fit: "+encodeNodeTags(t)+" => "+encodeNodeTags(h));
   if (t.nodeName != h.nodeName) return false;
   var att = filterNodeAttributes(t);
   
