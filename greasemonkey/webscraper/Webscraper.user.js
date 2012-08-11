@@ -562,7 +562,7 @@ function filterNodeAttributes(node){
           var cl = new Array();
           for (var j=0;j<node.classList.length;j++)
             if (!classesexcl.test(node.classList[j])) cl.push(node.classList[j]);
-          res["class"] = cl;
+          if (cl.length > 0) res["class"] = cl;
         } else res[a[i].name] = a[i].value;
     //if (node.attributes[i].name)
   return res;
