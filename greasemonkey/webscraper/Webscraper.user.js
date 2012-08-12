@@ -36,8 +36,8 @@ function activateScraper(){
 '<table>' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
-makeinput('Excluded classes', "classesexcl", "even|odd|.*select.*|.*highlight.*|.*[0-9].*|"+prf+".*")+
-makeinput('Excluded default tags', "tagsexcl", "tbody|p")+
+makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight|[0-9]|"+prf+").*")+
+makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
 '<hr>Resulting template: <br>' +
@@ -401,7 +401,7 @@ function addSelectionToTemplate(){
     }   
      
     function spanner(n){ return $("<span/>", {style: "display: table-cell"}).append(n); }
-    function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplate; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky  });};
+    function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplate; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky, click: function(e){e.preventDefault(); this.focus();}   });};
     function maketinybutton(c, info, clicky){ return $("<button/>", {class: c, text: info, click: clicky  });}; 
        
        
@@ -493,7 +493,7 @@ function addSelectionToTemplate(){
                .append(spanner().text(":="))
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
-             .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged}))
+             .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
              .append("optional")
             // .append("<br/>")
              .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
