@@ -477,7 +477,7 @@ function addSelectionToTemplate(){
       }
       
       if (!fitElements(highestMatchFrom, highestMatchTo)) {
-        alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom) +" vs. "+encodeNodeTags(highestMatchTo)+"\nMake sure to select both occurences in the same way, and add mismatching attributes the ignore lists.");
+        alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom) +" vs. "+encodeNodeTags(highestMatchTo)+"\nMake sure to select both occurences in the same way, and add mismatching attributes to the ignore lists.");
         readRepetitions(null,from);
         return;
       }
