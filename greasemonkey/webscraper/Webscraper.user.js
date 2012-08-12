@@ -249,22 +249,25 @@ function addSelectionToTemplate(){
   
   var start = r.startContainer, end = r.endContainer, startOffset = r.startOffset, endOffset = r.endOffset;
 
+  var changed = false;
   if (start.classList && start.classList.contains(prf+"templateRead")) {
     var temp = start.parentNode;
     removeNodeButKeepChildren(start);
     start = temp;
+    changed = true;
   }
   if (end.classList  && end.classList.contains(prf+"templateRead")) {
     var temp = end.parentNode;
     removeNodeButKeepChildren(end);
     end = temp;
+    changed = true;
   }
   $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead").each(
-    function(i,n){removeNodeButKeepChildren(n);}
+    function(i,n){removeNodeButKeepChildren(n); changed=true; }
   );
     
   
-  if (start == end && endOffset <= startOffset) return;
+  if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplate(); return; }
   
 //  alert(start+" "+end+" "+startOffset + " "+endOffset)
   //reimplementation of surroundContents, except the inserted element is moved down as far as possible in the hierarchie
@@ -279,7 +282,7 @@ function addSelectionToTemplate(){
   while (endOffset == 0 || (end.nodeType == Node.TEXT_NODE && end.nodeValue.substring(0,endOffset).trim() == "")) {
     endOffset = indexOfNode(end.parentNode.childNodes,end);
     end = end.parentNode;
-    if (start == end && endOffset <= startOffset) return;
+    if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplate(); return;}
   }
   
   //find common ancestor
@@ -312,18 +315,19 @@ function addSelectionToTemplate(){
   }
   
   if (!common) alert("failed to find common parent");
-  if (ai >= bi) return;
+  if (ai >= bi) { if (changed) regenerateTemplate(); return; }
   
   var templateRead;
   if (common.nodeType != Node.TEXT_NODE) {
     bi -= removeWhileEmptyTextNode(common.childNodes[ai]);
     bi -= removeWhileEmptyTextNode(common.childNodes[bi-1]);
-    if (ai >= bi) return;
+    if (ai >= bi) { if (changed) regenerateTemplate(); return;}
     
     while (ai + 1 == bi) {
       if (common.childNodes[ai].classList && common.childNodes[ai].classList.contains(prf+"templateRead")) {
         bi = ai + common.childNodes[ai].childNodes.length;
         removeNodeButKeepChildren(common.childNodes[ai]);
+        changed = true;
       } else {
         if (common.childNodes[ai].nodeType == Node.TEXT_NODE) break;
         common = common.childNodes[ai];
@@ -332,7 +336,7 @@ function addSelectionToTemplate(){
       }
       bi -= removeWhileEmptyTextNode(common.childNodes[ai]);
       bi -= removeWhileEmptyTextNode(common.childNodes[bi-1]);
-      if (ai >= bi) return;
+      if (ai >= bi) { if (changed) regenerateTemplate(); return;}
     }
 
     //if (bi + 1 <= common.childNodes.length)// && common.childNodes[bi].nodeType == Node.TEXT_NODE) 
