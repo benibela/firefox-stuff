@@ -192,16 +192,32 @@ function removeEmptyTextNodesChildNodes(e){
 }
 
 function removeNodeButKeepChildren(n){
+  if (!n) return;
+  if (!n.parentNode) return;
   var cn = n.childNodes;
   var p = n.parentNode;
   while (cn.length > 0){
     if (cn[0].classList && cn[0].classList.contains(prf+"read_options"))  {
-      if (cn[0] == window.searchingRepetition) window.searchingRepetition = null;
       n.removeChild(cn[0]);
      } else
       p.insertBefore(cn[0], n);
   }
+  var nid = $(n).attr("id");
   p.removeChild(n);
+  if (n == window.searchingRepetition) window.searchingRepetition = null;
+  if ($(n).data(prf+"repetition")) {
+    removeNodeButKeepChildren(document.getElementById($(n).data(prf+"repetition")));
+    if (!n.classList.contains(prf+"templateReadRepetition")){
+      //n = from element (see addRepetition)
+      $("."+prf+"templateLoopMarkedFrom"+nid)
+        .removeClass(prf+"templateLoopMarkedFrom"+nid)
+        .each(function(){
+          if (this.className.indexOf(prf+"templateLoopMarkedFrom") < 0) 
+            $(this).removeClass(prf+"templateLoop");  //remove loop marker, if no children are there to loop over
+        })
+    }
+  }
+  
 }
 
 function nextNode(e){
@@ -440,7 +456,8 @@ function addSelectionToTemplate(){
       to.addClass(prf+"templateReadRepetition")
       from.find("."+prf+"btnloop").text("read repetitions");
       from.data(prf+"repetition", to.attr("id"));
-      
+      to.data(prf+"repetition", from.attr("id"));
+            
       //alert(from.get()  + " "+to.get());                                                                                   works (=> [object XrayWrapper [object HTMLDivElement]] [object XrayWrapper [object HTMLDivElement]])
       //alert(from.get().parentNode  + " "+to.get().parentNode);                                                             does not work (=> undefined undefined)
       //alert(document.getElementById(from.attr("id")).parentNode  + " "+document.getElementById(to.attr("id")).parentNode); works (=> [object XrayWrapper [object HTMLTableCellElement]] [object XrayWrapper [object HTMLTableCellElement]])
@@ -466,14 +483,13 @@ function addSelectionToTemplate(){
         highestMatchTo = highestMatchTo.parentNode;
       }
       
-      if ($(highestMatchFrom).find("#"+to.attr("id")).length == 0){
+      if ($(highestMatchFrom.parentNode).find("#"+to.attr("id")).length == 0){
         alert("Highest common parent: "+encodeNodeTags(highestMatchFrom)+ " doesn't contain the marked repetition.\nFailed matching: "+encodeNodeTags(highestMatchFrom.parentNode)+ " vs. "+encodeNodeTags(highestMatchTo.parentNode) );
-        readRepetitions(null, from)
+        readRepetitions(null, from);
         return;
       }
         
-      if (highestMatchFrom.classList) highestMatchFrom.classList.add(prf+"templateLoop");  
-      else highestMatchFrom.className = prf+"templateLoop";
+      $(highestMatchFrom).addClass(prf+"templateLoop").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
       
       regenerateTemplate();
       //from.css("border", "2px solid blue");
