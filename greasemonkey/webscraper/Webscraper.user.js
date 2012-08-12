@@ -36,7 +36,7 @@ function activateScraper(){
 '<table>' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
-makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight|[0-9]|"+prf+").*")+
+makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight|active|[0-9]|"+prf+").*")+
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
