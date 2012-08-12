@@ -465,6 +465,12 @@ function addSelectionToTemplate(){
         highestMatchTo = highestMatchTo.parentNode;
       }
       
+      alert(to.attr("id"));
+      if ($(highestMatchFrom).find("#"+to.attr("id")).length == 0){
+        alert("Highest common parent: "+encodeNodeTags(highestMatchFrom)+ " doesn't contain the marked repetition.\nFailed matching: "+encodeNodeTags(highestMatchFrom.parentNode)+ " vs. "+encodeNodeTags(highestMatchTo.parentNode) );
+        readRepetitions(null, from)
+        return;
+      }
         
       if (highestMatchFrom.classList) highestMatchFrom.classList.add(prf+"templateLoop");  
       else highestMatchFrom.className = prf+"templateLoop";
