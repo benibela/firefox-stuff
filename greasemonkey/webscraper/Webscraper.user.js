@@ -217,7 +217,8 @@ function previousNode(e){
 
 
 function addSelectionToTemplate(){
-  if (!Node.TEXT_NODE) alert("initialization failed");  
+  if (!mainInterface || mainInterface.css("display") == "none") return;
+  if (!Node.TEXT_NODE) alert("initialization failed");
   
   var s = window.getSelection();
   
@@ -465,7 +466,6 @@ function addSelectionToTemplate(){
         highestMatchTo = highestMatchTo.parentNode;
       }
       
-      alert(to.attr("id"));
       if ($(highestMatchFrom).find("#"+to.attr("id")).length == 0){
         alert("Highest common parent: "+encodeNodeTags(highestMatchFrom)+ " doesn't contain the marked repetition.\nFailed matching: "+encodeNodeTags(highestMatchFrom.parentNode)+ " vs. "+encodeNodeTags(highestMatchTo.parentNode) );
         readRepetitions(null, from)
