@@ -66,15 +66,15 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       }
       
       var harness = $('<div/>', {style:"border:none"})
-        .append($("<a/>", {
+        .append($("<button/>", {
            text: "<<", 
            id: prf + "moveleft",
-           style: "border: 1px solid black; cursor: pointer", 
+           style: "border: 1px dashed black; padding: 2px;   cursor: pointer", 
            click: moveLeft }))
-        .append($("<a/>", {
+        .append($("<button/>", {
            text: ">>", 
            id: prf + "moveright",
-           style: "border: 1px solid black; cursor: pointer; float: right; display: none", 
+           style: "border: 1px dashed black; padding: 2px; cursor: pointer; float: right; display: none", 
            click: function(){
              $(prfid + "moveleft").show();
              $(prfid + "moveright").hide();
@@ -82,9 +82,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
              mainInterface.css("left", "");
              localStorage[prf+"guiposition"] = "right";
            } }))
-        .append($("<a/>", {
+        .append($("<button/>", {
            text: "X", 
-           style: "border: 1px solid black; cursor: pointer; float: right", 
+           style: "border: 3px double black; cursor: pointer; float: right", 
            click: deactivateScraper }))
            ;
       
@@ -94,6 +94,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       $("head").append($(
 '<style>'+ 
  '.'+prf+ 'templateRead { border: 2px solid #FF00FF; display: inline-block}' +      //text-decoration: line-through;  
+ '.'+prf+ 'templateRead div { border: none}' +      
+ '.'+prf+ 'templateRead input { border: 1px solid gray}' +      
+ '.'+prf+ 'templateRead button { border: 1px solid gray; margin-left: 4px}' +      
  '.'+prf+'read_options_hide {font-size:75%; border: 1px dashed; display: none; width: 100%; padding-right: 7px}'+
  '.'+prf+'templateRead:hover .'+prf+'read_options_hide{display: table}'+
  '.'+prf+'templateRead .'+prf+'read_options_pre{display: inline; background-color: #FF00FF}'+ 
@@ -104,7 +107,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+'read_source {width: 100%}'+
 
  '#'+prf+'main table {width: 100%}'+
- '#'+prf+'main input {width: 100%}'+
+ '#'+prf+'main input {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
+ '#'+prf+'main select {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
+ '#'+prf+'main table td {padding:2px; margin: 0}'+
 
 
  '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
