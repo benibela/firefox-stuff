@@ -114,6 +114,8 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 
  '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
  '.'+prf+ 'templateLoopMatched { border: 2px solid #00FF00; }' +      
+ '.'+prf+ 'templateLoopTR { background-color: #6666FF; }' +      
+ '.'+prf+ 'templateLoopMatchedTR { background-color: #55FF55; }' +      
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 '</style>'));
       
@@ -220,7 +222,9 @@ function removeNodeButKeepChildren(n){
         .each(function(){
           if (this.className.indexOf(prf+"templateLoopMarkedFrom") < 0) {
             $(this).removeClass(prf+"templateLoop");  //remove loop marker, if no children are there to loop over
-            $(this).removeClass(prf+"templateLoopMatched");  //remove loop marker, if no children are there to loop over
+            $(this).removeClass(prf+"templateLoopMatched");
+            $(this).removeClass(prf+"templateLoopTR");  
+            $(this).removeClass(prf+"templateLoopMatchedTR"); 
           }
         })
     }
@@ -506,13 +510,18 @@ function addSelectionToTemplate(){
         
       
       $(highestMatchFrom).addClass(prf+"templateLoop").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
+      if (highestMatchFrom.nodeName == "TR") $(highestMatchFrom).addClass(prf+"templateLoopTR");
       
       var siblings = highestMatchFrom.parentNode.childNodes;
       var selfFound = false;
       for (var i=0;i<siblings.length;i++)
         if (selfFound) {
-          if (canMatchPseudoTemplate(matchFromPseudoTemplate, matchFromPseudoTemplate.length, siblings[i]))
+          if (canMatchPseudoTemplate(matchFromPseudoTemplate, matchFromPseudoTemplate.length, siblings[i])) {
             $(siblings[i]).addClass(prf+"templateLoopMatched").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
+            if (siblings[i].nodeName == "TR")
+              $(siblings[i]).addClass(prf+"templateLoopMatchedTR");            
+              
+          }
         } else if (siblings[i] == highestMatchFrom) selfFound = true;
       
       regenerateTemplate();
@@ -526,7 +535,7 @@ function addSelectionToTemplate(){
       text: "",
       class: prf+"read_options_pre"
     }).add(
-      window.searchingRepetition ?  ( $("<span/>", {text: "repetition"}) )
+      window.searchingRepetition ?  ( $("<span/>", {text: "repetition", style: "background-color: yellow"}) )
       :
       (($('<div/>', {
           text: "",
@@ -650,7 +659,7 @@ function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
       if (canMatchPseudoTemplate(templateNodes, templateNodeLength-1, kids[i]))
         return true; 
   }
-  alert(templateNodes+" "+templateNodeLength+" "+tocheck+ " "+tocheck.textContent);
+  //alert(templateNodes+" "+templateNodeLength+" "+tocheck+ " "+tocheck.textContent);
   for (var i=0;i<kids.length;i++)
     if (canMatchPseudoTemplate(templateNodes, templateNodeLength, kids[i]))
       return true; 
