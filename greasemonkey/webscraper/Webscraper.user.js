@@ -113,6 +113,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 
 
  '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
+ '.'+prf+ 'templateLoopMatched { border: 2px solid #00FF00; }' +      
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 '</style>'));
       
@@ -217,8 +218,10 @@ function removeNodeButKeepChildren(n){
       $("."+prf+"templateLoopMarkedFrom"+nid)
         .removeClass(prf+"templateLoopMarkedFrom"+nid)
         .each(function(){
-          if (this.className.indexOf(prf+"templateLoopMarkedFrom") < 0) 
+          if (this.className.indexOf(prf+"templateLoopMarkedFrom") < 0) {
             $(this).removeClass(prf+"templateLoop");  //remove loop marker, if no children are there to loop over
+            $(this).removeClass(prf+"templateLoopMatched");  //remove loop marker, if no children are there to loop over
+          }
         })
     }
   }
@@ -487,9 +490,12 @@ function addSelectionToTemplate(){
         return;
       }
       
+      var matchFromPseudoTemplate = [{nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom)}];
+      
       while (highestMatchFrom.parentNode != highestMatchTo.parentNode && fitElements(highestMatchFrom.parentNode, highestMatchTo.parentNode)){
         highestMatchFrom = highestMatchFrom.parentNode;
         highestMatchTo = highestMatchTo.parentNode;
+        matchFromPseudoTemplate.push({nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom)});
       }
       
       if ($(highestMatchFrom.parentNode).find("#"+to.attr("id")).length == 0){
@@ -498,7 +504,16 @@ function addSelectionToTemplate(){
         return;
       }
         
+      
       $(highestMatchFrom).addClass(prf+"templateLoop").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
+      
+      var siblings = highestMatchFrom.parentNode.childNodes;
+      var selfFound = false;
+      for (var i=0;i<siblings.length;i++)
+        if (selfFound) {
+          if (canMatchPseudoTemplate(matchFromPseudoTemplate, matchFromPseudoTemplate.length, siblings[i]))
+            $(siblings[i]).addClass(prf+"templateLoopMatched").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
+        } else if (siblings[i] == highestMatchFrom) selfFound = true;
       
       regenerateTemplate();
       //from.css("border", "2px solid blue");
@@ -601,9 +616,13 @@ function filterNodeAttributes(node){
 }
 
 function fitElements(t, h){ //template vs. html element
-//alert("fit: "+encodeNodeTags(t)+" => "+encodeNodeTags(h));
   if (t.nodeName != h.nodeName) return false;
-  var att = filterNodeAttributes(t);
+  return fitElementTemplate(t.nodeName, filterNodeAttributes(t), h);
+}
+
+function fitElementTemplate(tn, att, h){ //template node name, template attributes vs. html element
+//alert("fit: "+encodeNodeTags(t)+" => "+encodeNodeTags(h));
+  if (tn != h.nodeName) return false;
   
   for (var a in att) 
     if (a != "class") {
@@ -618,6 +637,24 @@ function fitElements(t, h){ //template vs. html element
     }
 
   return true;
+}
+
+//(simplified) template matching
+function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
+  //TODO: optimize (e.g. gather all that match last, gather all that match last-1 and have parents in the 1st set,...). Matching again to all children is crazy
+  var last = templateNodes[templateNodeLength-1];
+  var kids = tocheck.childNodes;
+  if (fitElementTemplate(last.nodeName, last.attributes, tocheck)) {
+    if (templateNodeLength == 1) return true;
+    for (var i=0;i<kids.length;i++)
+      if (canMatchPseudoTemplate(templateNodes, templateNodeLength-1, kids[i]))
+        return true; 
+  }
+  alert(templateNodes+" "+templateNodeLength+" "+tocheck+ " "+tocheck.textContent);
+  for (var i=0;i<kids.length;i++)
+    if (canMatchPseudoTemplate(templateNodes, templateNodeLength, kids[i]))
+      return true; 
+  return false;
 }
 
 function encodeNodeTags(node, close){
