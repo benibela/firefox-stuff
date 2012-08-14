@@ -550,6 +550,7 @@ function addSelectionToTemplate(){
                .append(spanner().text(":="))
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
+             .append(maketinybutton(prf+"btnkill", "X", function(e){removeNodeButKeepChildren(this.parentNode.parentNode.parentNode.parentNode); regenerateTemplate(); }))
              .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
              .append("optional")
             // .append("<br/>")
