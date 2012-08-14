@@ -119,6 +119,8 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 '</style>'));
       
+      $(gui).find("input").change(regenerateTemplate);
+      
       var mouseUpActivated = false;
       $(document).mouseup(function(e){
         if (mouseUpActivated) return;
