@@ -472,9 +472,7 @@ function addSelectionToTemplate(){
       window.searchingRepetition = null;
 
       to.addClass(prf+"templateReadRepetition")
-      from.find("."+prf+"btnloop").text("read repetitions");
       from.data(prf+"repetition", to.attr("id"));
-      to.data(prf+"repetition", from.attr("id"));
             
       //alert(from.get()  + " "+to.get());                                                                                   works (=> [object XrayWrapper [object HTMLDivElement]] [object XrayWrapper [object HTMLDivElement]])
       //alert(from.get().parentNode  + " "+to.get().parentNode);                                                             does not work (=> undefined undefined)
@@ -510,6 +508,10 @@ function addSelectionToTemplate(){
         return;
       }
         
+      
+      
+      from.find("."+prf+"btnloop").text("read repetitions");
+      to.data(prf+"repetition", from.attr("id"));
       
       $(highestMatchFrom).addClass(prf+"templateLoop").addClass(prf+"templateLoopMarkedFrom"+from.attr("id"));
       if (highestMatchFrom.nodeName == "TR") $(highestMatchFrom).addClass(prf+"templateLoopTR");
@@ -815,7 +817,7 @@ function regenerateTemplate(){
   
   if (res[2]) res[0] = res[0].replace(/([^/])>/, '$1 t:optional="true">') //everything is optional
   
-  $(prfid + "template").text( res[0] );
+  $(prfid + "template").val( res[0] );
 }
 
 
