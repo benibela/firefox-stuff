@@ -22,12 +22,18 @@ $("<div/>",{
 
 var mainInterface = null;
 
-function makeinput(caption, id, value){ return '<tr><td>'+caption+':</td><td><input id="'+prf+id+'"'+(value?'value="'+value+'"':"")+'/></td></tr>'; }
+function makeinput(caption, id, value){ 
+  var overridenValue = value;
+  if (localStorage[prf+id+"_saved"]) overridenValue = localStorage[prf+id+"_saved"];
+  return '<tr><td>'+caption+':</td><td><input id="'+prf+id+'"'+(overridenValue?'value="'+overridenValue+'"':"")+'/></td><td><button onclick="document.getElementById(\''+prf+id+'\').value = \''+value+'\';">⟲</button></tr>'; 
+}
 function makeselect(caption, id, values, def){ 
   if (!def) def = 0;
+  if (localStorage[prf+id+"_saved"]) def = localStorage[prf+id+"_saved"] * 1;
   return '<tr><td>'+caption+':</td><td><select style="width:100%" id="'+prf+id+'">'+ values.map ( function(e, i) { return '<option value="'+i+'"'+(def == i ? " selected" : "")+'>'+e+'</option>'} ) + '</select></td></tr>'; }
 
 function activateScraper(){ 
+  localStorage[prf+"_deactivated"] = false;
   if (!mainInterface || mainInterface.css("display") == "none") {
     if (!mainInterface) {
       var gui = $(
@@ -108,8 +114,10 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 
  '#'+prf+'main table {width: 100%}'+
  '#'+prf+'main input {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
+ '#'+prf+'main table button {border: 1px dashed black; padding: 2px;   cursor: pointer}'+
  '#'+prf+'main select {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
  '#'+prf+'main table td {padding:2px; margin: 0}'+
+ 
 
 
  '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
@@ -119,7 +127,12 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 '</style>'));
       
-      $(gui).find("input").change(regenerateTemplate);
+      $(gui).find("input").change(function(){
+        localStorage[this.id+"_saved"] = this.value;
+        regenerateTemplate();
+      });
+      $(gui).find("select").change(regenerateTemplate);
+      $(gui).find("td button").click(regenerateTemplate);
       
       var mouseUpActivated = false;
       $(document).mouseup(function(e){
@@ -147,12 +160,10 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 }
 
 function deactivateScraper(){
+  localStorage[prf+"_deactivated"] = true;
   $(prfid+"activation").show();
   mainInterface.hide();
 }
-
-
-activateScraper();
 
 
 function myCreate(name, properties){ //basically the same as $(name, properties).get(), but latter can't be passed to surroundContents
@@ -553,11 +564,13 @@ function addSelectionToTemplate(){
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
              .append(maketinybutton(prf+"btnkill", "X", function(e){removeNodeButKeepChildren(this.parentNode.parentNode.parentNode.parentNode); regenerateTemplate(); }))
-             .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
-             .append("optional")
             // .append("<br/>")
              .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
              .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead"));}))
+             .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
+             .append("optional")
+             .append($("<input/>", {type: "checkbox", class: prf+"read_match_children", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
+             .append("match children")
            )
        )) 
     ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
@@ -706,6 +719,17 @@ function encodeNodeTags(node, close){
 function regenerateTemplate(){
   updateRegexps();
   
+  function serializeAll(cur){
+    if (cur.nodeType == Node.TEXT_NODE) return cur.nodeValue;
+    if (cur.classList && (cur.classList.contains(prf+"templateRead") || cur.classList.contains(prf+"read_options"))) return "";
+    var kids = cur.childNodes;
+    var res = encodeNodeTags(cur)+"\n";
+    for (var i=0;i < kids.length;i++) { 
+      res += serializeAll(kids[i]);
+    }
+    res += "</"+cur.nodeName+">\n";
+    return res;
+  }
   
   function regenerateTemplateRec(cur){
     var kids = cur.childNodes;
@@ -727,9 +751,11 @@ function regenerateTemplate(){
           continue;
         }
         hasReadTag = true;
+        var optional = $("."+prf+"read_optional", kids[i]).is(':checked');
+        var match_children = $("."+prf+"read_match_children", kids[i]).is(':checked');
         var noTextNodes = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE || kids[i-1].nodeValue.trim() == "" ) && 
                           (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE || kids[i+1].nodeValue.trim() == "" );
-        if (noTextNodes) t = "{";
+        if (noTextNodes && !match_children) t = "{";
         else { t = "<t:s>"; useSiblings = true; }
         
         var name = $("." + prf + "read_var", kids[i]).val();
@@ -737,12 +763,14 @@ function regenerateTemplate(){
         
         t += $("." + prf + "read_source", kids[i]).val();;
         
-        if (noTextNodes) t += "}";
+        if (noTextNodes && !match_children) t += "}";
         else t += "</t:s>";
-        fullSpecificied  = false;
+        if (match_children) { 
+          for (var j=0;j<kids[i].childNodes.length;j++) t+=serializeAll(kids[i].childNodes[j]);
+          if (t != "")  fullSpecificied = true;
+        } else fullSpecificied  = false;
         
         res.push(t);
-        var optional = $("."+prf+"read_optional", kids[i]).is(':checked');
         allOptional = allOptional && optional;
         hasOptional = hasOptional || optional;
         optionals.push(optional);
@@ -884,3 +912,8 @@ GUI:
   
   Read attribute
   */
+  
+  
+  
+if (!localStorage[prf+"_deactivated"]) activateScraper();
+  
