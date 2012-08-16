@@ -247,7 +247,12 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
         localStorage[prf+"guiposition"] = "left";
       }
       
-      var harness = $('<div/>', {style:"border:none; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){mainInterface.css("right", ""); dragStart(e,this.parentNode);})
+      var harness = $('<div/>', {style:"border:none; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){
+        if (mainInterface.css("right") != "") {
+          mainInterface.css("left", $(document).width() - $(this.parentNode).width() - (/[0-9]+/.exec(mainInterface.css("right"))) + "px"); 
+          mainInterface.css("right", "");
+        }
+        dragStart(e,this.parentNode);})
         .append($("<button/>", {
            text: "<<", 
            id: prf + "moveleft",
