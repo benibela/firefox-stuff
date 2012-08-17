@@ -225,7 +225,23 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 '<hr>Resulting template: <br>' +
 '  <textarea style="width: 20em; height:10em; resize: both; width: 100%" id="'+prf+'template">waiting for selection</textarea>'+
 '</div>'
-      );
+      ).append(
+        $("<button/>", {
+          text: "remote test",
+          click: function(){
+            var fd = new FormData();
+            fd.append("extract",$(prfid+"template").val());
+            fd.append("extract-kind", "template");
+            fd.append("data", "<html><head><title></title></head><body>"+document.body.innerHTML+"</body></html>");
+            fd.append("output-format", "json");
+            GM_xmlhttpRequest({
+              url: "http://videlibri.sourceforge.net/cgi-bin/xibrisoap",
+              data: fd, //automatically sets content-type
+              method: "POST",
+              onload: function(response){alert(response.responseText)}
+              });
+          }
+        }));
     
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
