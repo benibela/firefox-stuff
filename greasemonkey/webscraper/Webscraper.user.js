@@ -232,7 +232,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             var fd = new FormData();
             fd.append("extract",$(prfid+"template").val());
             fd.append("extract-kind", "template");
-            fd.append("data", "<html><head><title></title></head><body>"+document.body.innerHTML+"</body></html>");
+            var clone = document.body.cloneNode(true);
+            removeScraperNodes(clone);
+            fd.append("data", "<html><head><title></title></head><body>"+clone.innerHTML+"</body></html>");
             fd.append("output-format", "json");
             GM_xmlhttpRequest({
               url: "http://videlibri.sourceforge.net/cgi-bin/xibrisoap",
@@ -409,7 +411,7 @@ function removeEmptyTextNodesChildNodes(e){
   removeWhileEmptyTextNode(e.childNodes[e.childNodes.length-1]);
 }
 
-function removeNodeButKeepChildren(n){
+function removeNodeButKeepChildren(n, local){
   if (!n) return;
   if (!n.parentNode) return;
   var cn = n.childNodes;
@@ -422,6 +424,7 @@ function removeNodeButKeepChildren(n){
   }
   var nid = $(n).attr("id");
   p.removeChild(n);
+  if (local) return;
   if (n == window.searchingRepetition) window.searchingRepetition = null;
   if ($(n).data(prf+"repetition")) {
     removeNodeButKeepChildren(document.getElementById($(n).data(prf+"repetition")));
@@ -440,6 +443,21 @@ function removeNodeButKeepChildren(n){
     }
   }
   
+}
+
+function removeScraperNodes(n, local) {
+  if (n.classList && n.classList.contains("__scraper_templateRead")) {
+    removeNodeButKeepChildren(n, local);
+    return;    
+  }
+  if (n.id == "__scraper_main" || n.id == "__scraper_activation" ) {
+    n.parentNode.removeChild(n);
+    return;
+  }
+  if (!n.childNodes) return;
+  var kids = n.childNodes;
+  for (var i=kids.length-1;i>=0;i--)
+    removeScraperNodes(kids[i], local);
 }
 
 function nextNode(e){
