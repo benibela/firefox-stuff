@@ -117,7 +117,7 @@ function dragStart(event, el) {
 
   // Update element's z-index.
 
-  dragObj.elNode.style.zIndex = ++dragObj.zIndex;
+  //dragObj.elNode.style.zIndex = ++dragObj.zIndex;
 
   // Capture mousemove and mouseup events on the page.
 
@@ -176,6 +176,9 @@ function dragStop(event) {
     document.removeEventListener("mousemove", dragGo,   true);
     document.removeEventListener("mouseup",   dragStop, true);
   }
+  
+  var dragged = $(dragObj.elNode);
+  GM_setValue(prf+"guicoordinates", JSON.stringify([dragged.css("left"), dragged.css("top"), dragged.width(), dragged.height()]));
 }
 
 //******************************************************************************
@@ -189,12 +192,12 @@ var mainInterface = null;
 
 function makeinput(caption, id, value){ 
   var overridenValue = value;
-  if (localStorage[prf+id+"_saved"]) overridenValue = localStorage[prf+id+"_saved"];
+  if (GM_getValue(prf+id+"_saved")) overridenValue = GM_getValue(prf+id+"_saved");
   return '<tr><td>'+caption+':</td><td><input id="'+prf+id+'"'+(overridenValue?'value="'+overridenValue+'"':"")+'/></td><td><button onclick="document.getElementById(\''+prf+id+'\').value = \''+value+'\';">⟲</button></tr>'; 
 }
 function makeselect(caption, id, values, def){ 
   if (!def) def = 0;
-  if (localStorage[prf+id+"_saved"]) def = localStorage[prf+id+"_saved"] * 1;
+  if (GM_getValue(prf+id+"_saved")) def = GM_getValue(prf+id+"_saved") * 1;
   return '<tr><td>'+caption+':</td><td><select style="width:100%" id="'+prf+id+'">'+ values.map ( function(e, i) { return '<option value="'+i+'"'+(def == i ? " selected" : "")+'>'+e+'</option>'} ) + '</select></td></tr>'; }
 
 function activateScraper(){ 
@@ -264,7 +267,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
     
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
-               "right: 10px; top: 10px; " +
+               "top: 10px; " +
                "border: 1px solid gray; " +
                "background-color: white; "+ 
                "color: black;" +
@@ -276,19 +279,54 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       });
       mainInterface.appendTo("body");
       
-      function moveLeft(){
+      
+      var changedBody = false;
+      
+      function moveLeft(e){
         $(prfid + "moveleft").hide();
         $(prfid + "moveright").show();
+        mainInterface.css("left", "0px");
         mainInterface.css("right", "");
-        mainInterface.css("left", "10px");
-        localStorage[prf+"guiposition"] = "left";
+        mainInterface.css("top", "0px");
+        mainInterface.css("width", "25%");
+        mainInterface.css("height", "100%");
+        GM_setValue(prf+"guiposition", "left");
+        
+        $(document.body.parentNode).css("position", "absolute").css("left", "26%").css("width", "75%");
+        //TODO: move fixed
+        changedBody = true;
+      }
+      
+      function moveRight(e){
+        $(prfid + "moveleft").show();
+        $(prfid + "moveright").hide();
+        mainInterface.css("top", "0");
+        mainInterface.css("left", "");
+        mainInterface.css("right", "0px");
+        mainInterface.css("width", "25%");
+        mainInterface.css("height", "100%");
+        GM_setValue(prf+"guiposition", "right");
+
+        $(document.body.parentNode).css("position", "absolute").css("left", "0").css("width", "74%");
+        changedBody = true;
       }
       
       var harness = $('<div/>', {style:"border:none; max-height: 100%; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){
+        if (e.target != this) return;
+        $(prfid + "moveleft").show();
+        $(prfid + "moveright").show();
+        mainInterface.css("height", "");
+        mainInterface.css("width", "");
         if (mainInterface.css("right") != "") {
           mainInterface.css("left", $(document).width() - $(this.parentNode).width() - (/[0-9]+/.exec(mainInterface.css("right"))) + "px"); 
           mainInterface.css("right", "");
         }
+        GM_setValue(prf+"guiposition", "free");
+        if (changedBody) {
+          $(document.body.parentNode).css("left", "0").css("width", "100%");
+          changedBody = false;
+        }
+        //,alert("=>"+localStorage[prf+"guiposition"]);
         dragStart(e,this.parentNode);})
         .append($("<button/>", {
            text: "<<", 
@@ -299,13 +337,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
            text: ">>", 
            id: prf + "moveright",
            style: "border: 1px dashed black; padding: 2px; cursor: pointer; float: right; display: none", 
-           click: function(){
-             $(prfid + "moveleft").show();
-             $(prfid + "moveright").hide();
-             mainInterface.css("right", "10px");
-             mainInterface.css("left", "");
-             localStorage[prf+"guiposition"] = "right";
-           } }))
+           click: moveRight }))
         .append($("<button/>", {
            text: "X", 
            style: "border: 3px double black; cursor: pointer; float: right", 
@@ -356,7 +388,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 '</style>'));
       
       $(gui).find("input").change(function(){
-        localStorage[this.id+"_saved"] = this.value;
+        GM_setValue(this.id+"_saved", this.value);
         regenerateTemplate();
       });
       $(gui).find("select").change(regenerateTemplate);
@@ -380,7 +412,19 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
           return text.replace(/[-[\]{}()*+?.,\\^$|#]/g, "\\$&");
       } //by Colin Snover
 
-      if (localStorage[prf+"guiposition"] == "left") moveLeft(); //  $( prfid + "moveleft").click(); works, but then causes an exception :(
+//alert(localStorage[prf+"guiposition"]);
+      if (GM_getValue(prf+"guiposition") == "left") moveLeft(); 
+      else if (GM_getValue(prf+"guiposition") == "right") moveRight();
+      else if (GM_getValue(prf+"guiposition") == "free") {
+        $(prfid + "moveleft").show();
+        var pos = GM_getValue(prf+"guicoordinates");
+        if (pos) {
+          pos = JSON.parse(pos);
+          mainInterface.css("left", pos[0]).css("top", pos[1]);//.width(pos[2]);//.height(pos[3]);
+        } else mainInterface.css("right", "10px");
+      }
+      
+      //  $( prfid + "moveleft").click(); works, but then causes an exception :(
     } else mainInterface.show();
     $(prfid+"activation").hide();
     
