@@ -184,8 +184,7 @@ function dragStop(event) {
 
 var prf = "__scraper_";
 var prfid = "#__scraper_";
-var multipage = 0; 
-
+var multipageInitialized = false;
 var mainInterface = null;
 
 function makeinput(caption, id, value){ 
@@ -212,10 +211,10 @@ makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
-'<hr>Resulting template: <br>' +
-'  <textarea style="width: 20em; height:10em; resize: both; width: 100%" id="'+prf+'template">waiting for selection</textarea>'+
+'<hr>Resulting template:' +
 '</div>'
-      ).append(
+      )
+      .append(
         $("<button/>", {
           text: "remote test",
           click: function(){
@@ -234,40 +233,34 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               });
           }
         }))
-       .append($("<button/>", {
-         text: "new multipage template",
-         click: function(){
-          /* document.body.innerHTML = 
-'<div id="'+prf+'multipagesurrounding">' +
-'<div id="'+prf+'multipageinterface">' +
-'waiting for greasemonkey script activation...' +
-'</div>' +
-'<div id="'+prf+'multipageframe">' +
-'<iframe src="'+location.href+'"/>' +
-'</div>' +
-'</div>';
-*/
-
-         document.open();
-         var dw = document.write;
-         dw('<style>');
-         dw('  html, body { height: 100%; margin: 0; overflow: hidden }');
-         dw('  '+prfid+'multipagesurrounding { height: 100%; overflow: hidden}');
-         dw('  '+prfid+'multipageinterface { position: absolute; width: 25em; left: 0; top: 0; bottom: 0}');
-         dw('  '+prfid+'multipageframe { position: absolute; left: 25em; top: 0; right: 0; height: 100% }');
-         dw('  '+prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}');
-         dw('</style>');
-         dw('<div id="'+prf+'multipagesurrounding">');
-         dw('<div id="'+prf+'multipageinterface">');
-         dw('waiting for greasemonkey script activation...');
-         dw('</div>');
-         dw('<div id="'+prf+'multipageframe">');
-         dw('<iframe src="'+location.href+'"/>');
-         dw('</div');
-         dw('</div');
-         document.close();
-         
-       }}));
+       .append($("<br/>"))
+       .append($("<textarea/>", {
+         id: prf+'template',
+         text: "waiting for selection"
+       }))
+       .append($("<br/>"))
+       .append($("<input/>", {
+         type: "checkbox",
+         click: toggleMultipageScraping}))
+       .append("Multipage template")
+       .append($("<button/>", {id: prf + "multipageclearall", text: "clear all", click: function(){
+         if (!confirm("Are you sure you want to remove all templates below? This action is not reversible.")) return;
+         GM_setValue("multipageTemplate", "[]");
+         GM_setValue("multipageVariables", "");
+         $(prfid+"multipage").css("display", "none");
+         multipageInitialized = false;
+         toggleMultipageScraping();
+       }}))
+       .append($("<div/>", {
+         id: prf + "multipage",
+         style: "display: none"
+         })
+           .append($("<table/>", {id: prf + "multipagetable"}))
+           .append("Resulting multipage template:")
+           .append($("<br/>"))
+           .append($("<textarea/>", {id: prf + "multipagetemplate"}))
+       )
+       ;
     
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
@@ -276,7 +269,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
                "background-color: white; "+ 
                "color: black;" +
                "padding: 2px;"+
-               "z-index: 100000",
+               "z-index: 100000;"+
+               "overflow: auto;"+
+               "max-height: 95%",
         id: prf + "main"
       });
       mainInterface.appendTo("body");
@@ -289,7 +284,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
         localStorage[prf+"guiposition"] = "left";
       }
       
-      var harness = $('<div/>', {style:"border:none; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){
+      var harness = $('<div/>', {style:"border:none; max-height: 100%; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){
         if (mainInterface.css("right") != "") {
           mainInterface.css("left", $(document).width() - $(this.parentNode).width() - (/[0-9]+/.exec(mainInterface.css("right"))) + "px"); 
           mainInterface.css("right", "");
@@ -340,20 +335,24 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '#'+prf+'main table button {border: 1px dashed black; padding: 2px;   cursor: pointer}'+
  '#'+prf+'main select {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
  '#'+prf+'main table td {padding:2px; margin: 0}'+
- 
+ '#'+prf+'main textarea {width: 20em; height:10em; resize: both; width: 100%}'+ 
 
 
- '.'+prf+ 'templateLoop { border: 2px solid #0000FF; }' +      
- '.'+prf+ 'templateLoopMatched { border: 2px solid #00FF00; }' +      
- '.'+prf+ 'templateLoopTR { background-color: #6666FF; }' +      
- '.'+prf+ 'templateLoopMatchedTR { background-color: #55FF55; }' +      
+ '.'+prf+ 'templateLoop { border: 2px solid #0000FF !important  ; }' +      
+ '.'+prf+ 'templateLoopMatched { border: 2px solid #00FF00 !important; }' +      
+ '.'+prf+ 'templateLoopTR { background-color: #6666FF !important; }' +      
+ '.'+prf+ 'templateLoopTR td { background-color: #6666FF !important; }' +      
+ '.'+prf+ 'templateLoopMatchedTR { background-color: #55FF55 !important; }' +      
+ '.'+prf+ 'templateLoopMatchedTR td { background-color: #55FF55 !important; }' +      
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
 
 
- prfid+'multipagesurrounding { height: 100%; overflow: hidden}' +
+// prfid + "multipagetable textarea {width: 100%}" + 
+ 'body, html {height: 100%}' + 
+/* prfid+'multipagesurrounding { height: 100%; overflow: hidden}' +
  prfid+'multipageinterface { position: absolute; width: 25em; left: 0; top: 0; bottom: 0}' +
  prfid+'multipageframe { position: absolute; left: 25em; top: 0; right: 0; height: 100% }' +
- prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}' +
+ prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}' +*/
 '</style>'));
       
       $(gui).find("input").change(function(){
@@ -394,6 +393,90 @@ function deactivateScraper(){
   mainInterface.hide();
 }
 
+
+
+function toggleMultipageScraping(){
+  if ($(prfid+"multipage").css("display") == "none") {
+    $(prfid+"multipage").css("display", "block");
+    GM_getValue("multipageActive", true);
+    if (!multipageInitialized) {
+      var oldMultipage = GM_getValue("multipageTemplate");
+      if (oldMultipage) oldMultipage = JSON.parse(oldMultipage);
+      else oldMultipage = [];
+
+      var table = $(prfid+"multipagetable");
+      
+      table.html("");
+      
+      table.append($("<tr/>")
+          .append($("<td/>", {text: "Variables:"}))
+          .append($("<td/>", {colspan: 2}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))));
+      
+      function createNewPage(page){
+        table
+        .append($("<tr/>")
+          .append($("<td/>", {text: "URL:"}))
+          .append($("<td/>", {}).append($("<input/>", {value: page.url, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {}).append($("<button/>", {text: "X"})))
+        ).append($("<tr/>")
+          .append($("<td/>", {text: "Condition:"}))
+          .append($("<td/>", {}).append($("<input/>", {value: page.test, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {}).append($("<input/>", {type: "checkbox", checked: (page.repeat?true:false), change: regenerateMultipageTemplate})).append("repeat"))
+        ).append($("<tr/>")
+          .append($("<td/>", {text: "Template:"}))
+          .append($("<td/>", {colspan: "2"}).append($("<textarea/>", {text: page.template})))
+        )
+      }
+      for (var i = 0; i < oldMultipage.length; i++) 
+        createNewPage(oldMultipage[i]);
+      createNewPage({url: location, repeat: false, test: "", template: $(prfid+"template").val()});
+
+      multipageInitialized = true;
+      regenerateMultipageTemplate();
+    }
+    
+  } else {
+    $(prfid+"multipage").css("display", "none");
+    GM_getValue("multipageActive", false);
+  }
+}
+
+
+function regenerateMultipageTemplate(){
+  var pages = [];
+  var tds = $(prfid+"multipagetable tr td");
+  for (var i=2; i < tds.length; i+=8) {
+    pages.push({
+      url: tds[i+1].getElementsByTagName("input")[0].value,
+      test: tds[i+4].getElementsByTagName("input")[0].value,
+      repeat: tds[i+5].getElementsByTagName("input")[0].checked,
+      template: tds[i+7].getElementsByTagName("textarea")[0].value
+    });
+  }
+
+  var vars = $(prfid+"multipageVariables").val();
+  
+  
+  GM_setValue("multipageTemplate", JSON.stringify(pages));
+  GM_setValue("multipageVariables", vars);
+  
+  var res = "<action>\n";
+  if (vars != "") {
+    res += '  <page><template>{' + vars + '}</template></page>\n\n';
+  }
+  for (var i=0;i < pages.length; i++){
+    res += '  <page url="' + encodeXMLAttribute(pages[i].url)+'"';
+    if (pages[i].test != "") res += ' test="'+pages[i].test+'" ';
+    if (pages[i].repeat == true) res += ' repeat="true"';
+    res += ">\n";
+    if (pages[i].template != "") {
+      res += "    <template>\n" + pages[i].template + "\n    </template>\n";
+    }
+    res += "  </page>\n\n";
+  }
+  res += "</action>";
+  $(prfid+"multipagetemplate").val(res);
+}
 
 function myCreate(name, properties){ //basically the same as $(name, properties).get(), but latter can't be passed to surroundContents
   var result = document.createElement(name);
@@ -929,14 +1012,18 @@ function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
   return false;
 }
 
+function encodeXMLAttribute(s) {
+  return s.replace( /&/g, '&amp;').replace( /"/g, '&quot;').replace( /</g, '&lt;');
+}
+
 function encodeNodeTags(node, close){
   if (!node) return "??";
   var res = "<" + node.nodeName;
   var attr = filterNodeAttributes(node);
   if (attr)
     for (var i in attr)
-      if (i != "class") res += " " + i + "=\""+attr[i]+"\"";
-      else res += " " + i + "=\""+attr[i].join(" ")+"\"";
+      if (i != "class") res += " " + i + "=\""+encodeXMLAttribute(attr[i])+"\"";
+      else res += " " + i + "=\""+encodeXMLAttribute(attr[i].join(" "))+"\"";
   if (close) res += "/>\n";
   else res += ">";
   return res;
@@ -1091,7 +1178,13 @@ function regenerateTemplate(){
   if (res[2]) res[0] = res[0].replace(/([^/])>/, '$1 t:optional="true">') //everything is optional
   
   $(prfid + "template").val( res[0] );
+  
+  if ($(prfid+"multipage").css("display") != "none") {
+    $(prfid+"multipagetable textarea").last().val(res[0]);
+    regenerateMultipageTemplate();
+  }
 }
+
 
 
 /*Templategeneration guide lines:
@@ -1160,35 +1253,18 @@ GUI:
   
   
   
-if (document.getElementById(prf + "multipageinterface")) {
-  $(prfid + "multipageinterface").text("abc");
   
   
-  activateScraper();
-  multipage = 2;
-} else {
-  var frame = window.parent;
-  while (frame && frame.document) { 
-    if (frame.document.getElementById(prf + "multipageinterface")) {
-      multipage = 1;
-      break;
-    }
-    if (frame == frame.parent) break;
-    frame = frame.parent;
-  }
+$("<div/>",{
+  text: "Activate Scraping",
+  style: "position: fixed;" +
+         "right: 10px; top: 10px; " +
+         "border: 2px solid red; " +
+         "background-color: white; "+ 
+         "cursor: pointer; padding: 2px; z-index: 100000",
+  id: prf + "activation",
+  click:  activateScraper
+}).appendTo("body");
 
-  if (!multipage) {
-    $("<div/>",{
-      text: "Activate Scraping",
-      style: "position: fixed;" +
-             "right: 10px; top: 10px; " +
-             "border: 2px solid red; " +
-             "background-color: white; "+ 
-             "cursor: pointer; padding: 2px; z-index: 100000",
-      id: prf + "activation",
-      click:  activateScraper
-    }).appendTo("body");
-    
-    if (!localStorage[prf+"_deactivated"]) activateScraper();
-  }
-}
+if (!localStorage[prf+"_deactivated"]) activateScraper();
+
