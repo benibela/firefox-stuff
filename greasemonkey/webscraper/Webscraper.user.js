@@ -184,17 +184,7 @@ function dragStop(event) {
 
 var prf = "__scraper_";
 var prfid = "#__scraper_";
-
-$("<div/>",{
-  text: "Activate Scraping",
-  style: "position: fixed;" +
-         "right: 10px; top: 10px; " +
-         "border: 2px solid red; " +
-         "background-color: white; "+ 
-         "cursor: pointer; padding: 2px; z-index: 100000",
-  id: prf + "activation",
-  click:  activateScraper
-}).appendTo("body");
+var multipage = 0; 
 
 var mainInterface = null;
 
@@ -243,7 +233,41 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               onload: function(response){alert(response.responseText)}
               });
           }
-        }));
+        }))
+       .append($("<button/>", {
+         text: "new multipage template",
+         click: function(){
+          /* document.body.innerHTML = 
+'<div id="'+prf+'multipagesurrounding">' +
+'<div id="'+prf+'multipageinterface">' +
+'waiting for greasemonkey script activation...' +
+'</div>' +
+'<div id="'+prf+'multipageframe">' +
+'<iframe src="'+location.href+'"/>' +
+'</div>' +
+'</div>';
+*/
+
+         document.open();
+         var dw = document.write;
+         dw('<style>');
+         dw('  html, body { height: 100%; margin: 0; overflow: hidden }');
+         dw('  '+prfid+'multipagesurrounding { height: 100%; overflow: hidden}');
+         dw('  '+prfid+'multipageinterface { position: absolute; width: 25em; left: 0; top: 0; bottom: 0}');
+         dw('  '+prfid+'multipageframe { position: absolute; left: 25em; top: 0; right: 0; height: 100% }');
+         dw('  '+prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}');
+         dw('</style>');
+         dw('<div id="'+prf+'multipagesurrounding">');
+         dw('<div id="'+prf+'multipageinterface">');
+         dw('waiting for greasemonkey script activation...');
+         dw('</div>');
+         dw('<div id="'+prf+'multipageframe">');
+         dw('<iframe src="'+location.href+'"/>');
+         dw('</div');
+         dw('</div');
+         document.close();
+         
+       }}));
     
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
@@ -324,6 +348,12 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+ 'templateLoopTR { background-color: #6666FF; }' +      
  '.'+prf+ 'templateLoopMatchedTR { background-color: #55FF55; }' +      
  '.'+prf+ 'templateReadRepetition { border: 2px solid yellow }' +
+
+
+ prfid+'multipagesurrounding { height: 100%; overflow: hidden}' +
+ prfid+'multipageinterface { position: absolute; width: 25em; left: 0; top: 0; bottom: 0}' +
+ prfid+'multipageframe { position: absolute; left: 25em; top: 0; right: 0; height: 100% }' +
+ prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}' +
 '</style>'));
       
       $(gui).find("input").change(function(){
@@ -1130,5 +1160,35 @@ GUI:
   
   
   
-if (!localStorage[prf+"_deactivated"]) activateScraper();
+if (document.getElementById(prf + "multipageinterface")) {
+  $(prfid + "multipageinterface").text("abc");
   
+  
+  activateScraper();
+  multipage = 2;
+} else {
+  var frame = window.parent;
+  while (frame && frame.document) { 
+    if (frame.document.getElementById(prf + "multipageinterface")) {
+      multipage = 1;
+      break;
+    }
+    if (frame == frame.parent) break;
+    frame = frame.parent;
+  }
+
+  if (!multipage) {
+    $("<div/>",{
+      text: "Activate Scraping",
+      style: "position: fixed;" +
+             "right: 10px; top: 10px; " +
+             "border: 2px solid red; " +
+             "background-color: white; "+ 
+             "cursor: pointer; padding: 2px; z-index: 100000",
+      id: prf + "activation",
+      click:  activateScraper
+    }).appendTo("body");
+    
+    if (!localStorage[prf+"_deactivated"]) activateScraper();
+  }
+}
