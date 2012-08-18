@@ -239,14 +239,15 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
        .append($("<br/>"))
        .append($("<textarea/>", {
          id: prf+'template',
-         text: "waiting for selection"
+         text: "waiting for selection..."
        }))
        .append($("<br/>"))
        .append($("<input/>", {
          type: "checkbox",
+         id: prf+"multipagecheckbox",  
          click: toggleMultipageScraping}))
        .append("Multipage template")
-       .append($("<button/>", {id: prf + "multipageclearall", text: "clear all", click: function(){
+       .append($("<button/>", {id: prf + "multipageclearall", text: "clear all", style:"display: none",  click: function(){
          if (!confirm("Are you sure you want to remove all templates below? This action is not reversible.")) return;
          GM_setValue("multipageTemplate", "[]");
          GM_setValue("multipageVariables", "");
@@ -274,6 +275,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
                "padding: 2px;"+
                "z-index: 100000;"+
                "overflow: auto;"+
+               "overflow-x: hidden;"+
                "max-height: 95%",
         id: prf + "main"
       });
@@ -441,8 +443,9 @@ function deactivateScraper(){
 
 function toggleMultipageScraping(){
   if ($(prfid+"multipage").css("display") == "none") {
+    $(prfid+"multipageclearall").show();
     $(prfid+"multipage").css("display", "block");
-    GM_getValue("multipageActive", true);
+    GM_setValue("multipageActive", true);
     if (!multipageInitialized) {
       var oldMultipage = GM_getValue("multipageTemplate");
       if (oldMultipage) oldMultipage = JSON.parse(oldMultipage);
@@ -458,10 +461,12 @@ function toggleMultipageScraping(){
       
       function createNewPage(page){
         table
-        .append($("<tr/>")
-          .append($("<td/>", {text: "URL:"}))
-          .append($("<td/>", {}).append($("<input/>", {value: page.url, change: regenerateMultipageTemplate})))
-          .append($("<td/>", {}).append($("<button/>", {text: "X"})))
+        .append($("<tr/>",  {})
+          .append($("<td/>", {text: "URL:", style: "border-top: 1px solid black"}))
+          .append($("<td/>", {style: "border-top: 1px solid black"})
+            .append($("<input/>", {value: page.url, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {style: "border-top: 1px solid black"})
+            .append($("<button/>", {text: "X"})))
         ).append($("<tr/>")
           .append($("<td/>", {text: "Condition:"}))
           .append($("<td/>", {}).append($("<input/>", {value: page.test, change: regenerateMultipageTemplate})))
@@ -471,9 +476,14 @@ function toggleMultipageScraping(){
           .append($("<td/>", {colspan: "2"}).append($("<textarea/>", {text: page.template})))
         )
       }
+      oldMultipage.push({url: location, repeat: false, test: "", template: $(prfid+"template").val()});
+      while (oldMultipage.length >= 2 &&
+             oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url &&
+             (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
+          oldMultipage.pop(); //remove useless duplicates caused by reloads
+          
       for (var i = 0; i < oldMultipage.length; i++) 
         createNewPage(oldMultipage[i]);
-      createNewPage({url: location, repeat: false, test: "", template: $(prfid+"template").val()});
 
       multipageInitialized = true;
       regenerateMultipageTemplate();
@@ -481,7 +491,8 @@ function toggleMultipageScraping(){
     
   } else {
     $(prfid+"multipage").css("display", "none");
-    GM_getValue("multipageActive", false);
+    $(prfid+"multipageclearall").hide();
+    GM_setValue("multipageActive", false);
   }
 }
 
@@ -1310,5 +1321,10 @@ $("<div/>",{
   click:  activateScraper
 }).appendTo("body");
 
-if (!localStorage[prf+"_deactivated"]) activateScraper();
-
+if (!localStorage[prf+"_deactivated"]) {
+  activateScraper();
+  if (GM_getValue("multipageActive", false)) {
+    document.getElementById(prf+"multipagecheckbox").checked = true;
+    toggleMultipageScraping();
+  }
+}
