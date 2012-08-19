@@ -206,8 +206,9 @@ function activateScraper(){
     if (!mainInterface) {
       var gui = $(
 '<div style="border: none; clear: both" id="'+prf+'gui">'+
-'<b>Select the values you want to extract on the site</b><br><hr>' + 
-'<table>' + 
+'<b>Select the values you want to extract on the site</b><br><hr>' +
+'<input id="'+prf+'optioncheckbox" type="checkbox"/> Show options<br>'+
+'<table id="'+prf+'optiontable" style="display:none">' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
 makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight|active|[0-9]|"+prf+").*")+
@@ -239,7 +240,8 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
        .append($("<br/>"))
        .append($("<textarea/>", {
          id: prf+'template',
-         text: "waiting for selection..."
+         text: "waiting for selection...",
+         style: "height: 15em"
        }))
        .append($("<br/>"))
        .append($("<input/>", {
@@ -406,6 +408,10 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
         }, 350);
       });
       
+      $(prfid+"optioncheckbox").click(function(){
+        $(prfid+"optiontable").toggle(); 
+        GM_setValue("optionTableDisplay", $(prfid+"optiontable").css("display"));
+      });
       
       if (!Node.ELEMENT_NODE) Node.ELEMENT_NODE = 1;
       if (!Node.TEXT_NODE) Node.TEXT_NODE = 3;
@@ -505,7 +511,9 @@ function toggleMultipageScraping(){
           .append($("<td/>", {colspan: "2"}).append($("<textarea/>", {text: page.template})))
         )
       }
-      oldMultipage.push({url: location, repeat: false, test: "", template: $(prfid+"template").val(), post: ""});
+      var curUrl = location.href;
+      if (curUrl.indexOf("#") > 0) curUrl = curUrl.substring(0, curUrl.indexOf("#"));
+      oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: ""});
       while (oldMultipage.length >= 2 &&
              oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url &&
              (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
@@ -1359,4 +1367,9 @@ if (!localStorage[prf+"_deactivated"]) {
     document.getElementById(prf+"multipagecheckbox").checked = true;
     toggleMultipageScraping();
   }
+}
+
+if (GM_getValue("optionTableDisplay", "none") != "none") {
+  $(prfid+"optiontable").show(); 
+  $(prfid+"optioncheckbox").prop("checked", "checked");
 }
