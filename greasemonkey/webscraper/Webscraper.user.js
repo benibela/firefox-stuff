@@ -418,7 +418,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       if (GM_getValue(prf+"guiposition") == "left") moveLeft(); 
       else if (GM_getValue(prf+"guiposition") == "right") moveRight();
       else if (GM_getValue(prf+"guiposition") == "free") {
-        $(prfid + "moveleft").show();
+        $(prfid + "moveright").show();
         var pos = GM_getValue(prf+"guicoordinates");
         if (pos) {
           pos = JSON.parse(pos);
@@ -460,23 +460,52 @@ function toggleMultipageScraping(){
           .append($("<td/>", {colspan: 2}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))));
       
       function createNewPage(page){
+        var more = (page.repeat || page.post || page.test);
         table
         .append($("<tr/>",  {})
-          .append($("<td/>", {text: "URL:", style: "border-top: 1px solid black"}))
+          .append($("<td/>", {style: "border-top: 1px solid black"})
+            .append($("<button/>", {text: "X", click: function(){
+              var row = this.parentNode.parentNode;
+              var table = row.parentNode;
+              if (table.rows.length < 8) { alert("The last sub template cannot be removed."); return;}
+              if (!confirm("Are you sure you want to remove the template for url \""+row.getElementsByTagName("input")[0].value+"\"?\nThis action is not reversible.")) return;
+              table.removeChild(row.nextSibling);
+              table.removeChild(row.nextSibling);
+              table.removeChild(row.nextSibling);
+              table.removeChild(row);
+            }}))
+            .append($("<span/>", {text: " URL:"}))
+           )
           .append($("<td/>", {style: "border-top: 1px solid black"})
             .append($("<input/>", {value: page.url, change: regenerateMultipageTemplate})))
           .append($("<td/>", {style: "border-top: 1px solid black"})
-            .append($("<button/>", {text: "X"})))
-        ).append($("<tr/>")
+            .append($("<input/>", {type: "checkbox", checked: more?true:false, change: function(){
+              var row = this.parentNode.parentNode;
+              if (row.nextSibling.style.display == "none") {
+                row.nextSibling.style.display = "table-row";
+                row.nextSibling.nextSibling.style.display = "table-row";
+              } else {
+                row.nextSibling.style.display = "none";
+                row.nextSibling.nextSibling.style.display = "none";
+              }
+            }}))
+            .append("more")
+           )
+        ).append($("<tr/>", {style: more?"":"display: none"})
           .append($("<td/>", {text: "Condition:"}))
           .append($("<td/>", {}).append($("<input/>", {value: page.test, change: regenerateMultipageTemplate})))
-          .append($("<td/>", {}).append($("<input/>", {type: "checkbox", checked: (page.repeat?true:false), change: regenerateMultipageTemplate})).append("repeat"))
+          .append($("<td/>", {})
+            .append($("<input/>", {type: "checkbox", checked: (page.repeat?true:false), change: regenerateMultipageTemplate}))
+            .append("repeat"))
+        ).append($("<tr/>", {style: more?"":"display: none"})
+          .append($("<td/>", {text: "Postdata:"}))
+          .append($("<td/>", {}).append($("<input/>", {value: page.post, change: regenerateMultipageTemplate})))
         ).append($("<tr/>")
           .append($("<td/>", {text: "Template:"}))
           .append($("<td/>", {colspan: "2"}).append($("<textarea/>", {text: page.template})))
         )
       }
-      oldMultipage.push({url: location, repeat: false, test: "", template: $(prfid+"template").val()});
+      oldMultipage.push({url: location, repeat: false, test: "", template: $(prfid+"template").val(), post: ""});
       while (oldMultipage.length >= 2 &&
              oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url &&
              (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
@@ -500,12 +529,13 @@ function toggleMultipageScraping(){
 function regenerateMultipageTemplate(){
   var pages = [];
   var tds = $(prfid+"multipagetable tr td");
-  for (var i=2; i < tds.length; i+=8) {
+  for (var i=2; i < tds.length; i+=10) {
     pages.push({
       url: tds[i+1].getElementsByTagName("input")[0].value,
       test: tds[i+4].getElementsByTagName("input")[0].value,
       repeat: tds[i+5].getElementsByTagName("input")[0].checked,
-      template: tds[i+7].getElementsByTagName("textarea")[0].value
+      post: tds[i+7].getElementsByTagName("input")[0].value,
+      template: tds[i+9].getElementsByTagName("textarea")[0].value
     });
   }
 
@@ -524,6 +554,8 @@ function regenerateMultipageTemplate(){
     if (pages[i].test != "") res += ' test="'+pages[i].test+'" ';
     if (pages[i].repeat == true) res += ' repeat="true"';
     res += ">\n";
+    if (pages[i].post != "") 
+      res += "    <post>"+encodeXMLAttribute(pages[i].post)+"</post>\n";
     if (pages[i].template != "") {
       res += "    <template>\n" + pages[i].template + "\n    </template>\n";
     }
