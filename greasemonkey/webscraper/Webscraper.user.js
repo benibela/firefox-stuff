@@ -227,7 +227,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             fd.append("extract-kind", "template");
             var clone = document.body.cloneNode(true);
             removeScraperNodes(clone);
-            fd.append("data", "<html><head><title></title></head><body>"+clone.innerHTML+"</body></html>");
+            fd.append("data", "<html><head><title></title></head>"+ //prefix
+                              encodeNodeTags(document.body)+ //body tag (with existing attributes)
+                              clone.innerHTML+"</body></html>");
             fd.append("output-format", "json");
             GM_xmlhttpRequest({
               url: "http://videlibri.sourceforge.net/cgi-bin/xibrisoap",
