@@ -395,10 +395,10 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       
       $(gui).find("input").change(function(){
         GM_setValue(this.id+"_saved", this.value);
-        regenerateTemplate();
+        regenerateTemplateQueued();
       });
-      $(gui).find("select").change(regenerateTemplate);
-      $(gui).find("td button").click(regenerateTemplate);
+      $(gui).find("select").change(regenerateTemplateQueued);
+      $(gui).find("td button").click(regenerateTemplateQueued);
       
       var mouseUpActivated = false;
       $(document).mouseup(function(e){
@@ -717,7 +717,7 @@ function addSelectionToTemplate(){
   );
     
   
-  if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplate(); return; }
+  if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplateQueued(); return; }
   
 //  alert(start+" "+end+" "+startOffset + " "+endOffset)
   //reimplementation of surroundContents, except the inserted element is moved down as far as possible in the hierarchie
@@ -732,7 +732,7 @@ function addSelectionToTemplate(){
   while (endOffset == 0 || (end.nodeType == Node.TEXT_NODE && end.nodeValue.substring(0,endOffset).trim() == "")) {
     endOffset = indexOfNode(end.parentNode.childNodes,end);
     end = end.parentNode;
-    if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplate(); return;}
+    if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplateQueued(); return;}
   }
   
   //find common ancestor
@@ -765,13 +765,13 @@ function addSelectionToTemplate(){
   }
   
   if (!common) alert("failed to find common parent");
-  if (ai >= bi) { if (changed) regenerateTemplate(); return; }
+  if (ai >= bi) { if (changed) regenerateTemplateQueued(); return; }
   
   var templateRead;
   if (common.nodeType != Node.TEXT_NODE) {
     bi -= removeWhileEmptyTextNode(common.childNodes[ai]);
     bi -= removeWhileEmptyTextNode(common.childNodes[bi-1]);
-    if (ai >= bi) { if (changed) regenerateTemplate(); return;}
+    if (ai >= bi) { if (changed) regenerateTemplateQueued(); return;}
     
     while (ai + 1 == bi) {
       if (common.childNodes[ai].classList && common.childNodes[ai].classList.contains(prf+"templateRead")) {
@@ -786,7 +786,7 @@ function addSelectionToTemplate(){
       }
       bi -= removeWhileEmptyTextNode(common.childNodes[ai]);
       bi -= removeWhileEmptyTextNode(common.childNodes[bi-1]);
-      if (ai >= bi) { if (changed) regenerateTemplate(); return;}
+      if (ai >= bi) { if (changed) regenerateTemplateQueued(); return;}
     }
 
     //if (bi + 1 <= common.childNodes.length)// && common.childNodes[bi].nodeType == Node.TEXT_NODE) 
@@ -872,7 +872,7 @@ function addSelectionToTemplate(){
     }   
      
     function spanner(n){ return $("<span/>", {style: "display: table-cell"}).append(n); }
-    function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplate; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky, click: function(e){e.preventDefault(); this.focus();}   });};
+    function maketinyedit(c, info, clicky){if (!clicky) clicky = regenerateTemplateQueued; return $("<input/>", {class: c, title: info, /*change: clicky,*/ keyup: clicky, click: function(e){e.preventDefault(); this.focus();}   });};
     function maketinybutton(c, info, clicky){ return $("<button/>", {class: c, text: info, click: clicky  });}; 
        
        
@@ -881,7 +881,7 @@ function addSelectionToTemplate(){
       var value = p.find("."+prf+"read_var").val();
       if (p.find("."+prf+"read_optional").is(':checked')) value += "?";
       p.find("."+prf+"read_options_pre").text(value);
-      regenerateTemplate();
+      regenerateTemplateQueued();
     }
     
     function followLink(e){
@@ -889,7 +889,7 @@ function addSelectionToTemplate(){
       p.find("."+prf+"read_optional").prop("checked", true);
       p.find("."+prf+"read_var").val("_follow");
       p.find("."+prf+"read_source").val("@href");
-      regenerateTemplate();
+      regenerateTemplateQueued();
       e.stopImmediatePropagation();
       e.preventDefault();
     }
@@ -964,7 +964,7 @@ function addSelectionToTemplate(){
           }
         } else if (siblings[i] == highestMatchFrom) selfFound = true;
       
-      regenerateTemplate();
+      regenerateTemplateQueued();
       //from.css("border", "2px solid blue");
     }
    
@@ -988,7 +988,7 @@ function addSelectionToTemplate(){
                .append(spanner().text(":="))
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
-             .append(maketinybutton(prf+"btnkill", "X", function(e){removeNodeButKeepChildren(this.parentNode.parentNode.parentNode.parentNode); regenerateTemplate(); }))
+             .append(maketinybutton(prf+"btnkill", "X", function(e){removeNodeButKeepChildren(this.parentNode.parentNode.parentNode.parentNode); regenerateTemplateQueued(); }))
             // .append("<br/>")
              .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
              .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead"));}))
@@ -1036,7 +1036,7 @@ function addSelectionToTemplate(){
 //  if (templateRead.parentNode) removeEmptyTextNodesChildNodes(templateRead.parentNode);
 //  if (templateRead.parentNode.parentNode) removeEmptyTextNodesChildNodes(templateRead.parentNode.parentNode);
   */
-  regenerateTemplate();
+  regenerateTemplateQueued();
   window.getSelection().collapseToStart();
 }
 
@@ -1144,6 +1144,15 @@ function encodeNodeTags(node, close){
   
   return cmp(a1, a2) && cmp(a2, a1);
 }*/
+
+
+function regenerateTemplateQueued(){   setTimeout(function(){regenerateTemplateQueuedDo(new Date().getTime())}, 250); }
+
+var updatedTime = 0;
+function regenerateTemplateQueuedDo(callTime){   
+  if (callTime < updatedTime) return;
+  regenerateTemplate();
+}
 
 function regenerateTemplate(){
   updateRegexps();
@@ -1280,6 +1289,8 @@ function regenerateTemplate(){
     $(prfid+"multipagetable textarea").last().val(res[0]);
     regenerateMultipageTemplate();
   }
+  
+  updatedTime = new Date().getTime();
 }
 
 
