@@ -232,7 +232,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
                               clone.innerHTML+"</body></html>");
             fd.append("output-format", "json");
             GM_xmlhttpRequest({
-              url: "http://videlibri.sourceforge.net/cgi-bin/xibrisoap",
+              url: "http://videlibri.sourceforge.net/cgi-bin/xidelcgi",
               data: fd, //automatically sets content-type
               method: "POST",
               onload: function(response){alert(response.responseText)}
