@@ -470,7 +470,24 @@ function toggleMultipageScraping(){
       
       table.append($("<tr/>")
           .append($("<td/>", {text: "Variables:"}))
-          .append($("<td/>", {colspan: 2}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))));
+          .append($("<td/>", {colspan: 3}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))));
+      
+      function toggleNextTR(cb, count){
+        if (!count) count = 1;
+        var row = cb.parentNode.parentNode;
+        var el = row.nextSibling;
+        if (el.style.display == "none") {
+          for (var i=0;i<count;i++) {
+            el.style.display = "table-row";
+            el = el.nextSibling;
+          }
+        } else {
+          for (var i=0;i<count;i++) {
+            el.style.display = "none";
+            el = el.nextSibling;
+          }
+        }
+      }
       
       function createNewPage(page){
         var more = (page.repeat || page.post || page.test);
@@ -490,33 +507,29 @@ function toggleMultipageScraping(){
             }}))
             .append($("<span/>", {text: " URL:"}))
            )
-          .append($("<td/>", {style: "border-top: 1px solid black"})
+          .append($("<td/>", {style: "border-top: 1px solid black", colspan: 3})
             .append($("<input/>", {value: page.url, change: regenerateMultipageTemplate})))
           .append($("<td/>", {style: "border-top: 1px solid black"})
-            .append($("<input/>", {type: "checkbox", checked: more?true:false, change: function(){
-              var row = this.parentNode.parentNode;
-              if (row.nextSibling.style.display == "none") {
-                row.nextSibling.style.display = "table-row";
-                row.nextSibling.nextSibling.style.display = "table-row";
-              } else {
-                row.nextSibling.style.display = "none";
-                row.nextSibling.nextSibling.style.display = "none";
-              }
-            }}))
+            .append($("<input/>", {type: "checkbox", checked: more?true:false, change: function(){toggleNextTR(this, 2 + (page.repeat?1:0));}}))
             .append("more")
            )
         ).append($("<tr/>", {style: more?"":"display: none"})
-          .append($("<td/>", {text: "Condition:"}))
-          .append($("<td/>", {}).append($("<input/>", {value: page.test, change: regenerateMultipageTemplate})))
-          .append($("<td/>", {})
-            .append($("<input/>", {type: "checkbox", checked: (page.repeat?true:false), change: regenerateMultipageTemplate}))
-            .append("repeat"))
-        ).append($("<tr/>", {style: more?"":"display: none"})
           .append($("<td/>", {text: "Postdata:"}))
-          .append($("<td/>", {}).append($("<input/>", {value: page.post, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {colspan: 3}).append($("<input/>", {value: page.post, change: regenerateMultipageTemplate})))
+        ).append($("<tr/>", {style: more?"":"display: none"})
+          .append($("<td/>", {text: "Condition:"}))
+          .append($("<td/>", {colspan: 3}).append($("<input/>", {value: page.test, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {})
+            .append($("<input/>", {type: "checkbox", checked: (page.repeat?true:false), change: function(){page.repeat = !page.repeat; toggleNextTR(this); regenerateMultipageTemplate();}}))
+            .append("loop"))
+        ).append($("<tr/>", {style: page.repeat?"":"display: none"})
+          .append($("<td/>", {text: "For all:"}))
+          .append($("<td/>", {}).append($("<input/>", {value: page.loopvar, change: regenerateMultipageTemplate})))
+          .append($("<td/>", {text: "in"}))
+          .append($("<td/>", {}).append($("<input/>", {value: page.looplist, change: regenerateMultipageTemplate})))
         ).append($("<tr/>")
           .append($("<td/>", {text: "Template:"}))
-          .append($("<td/>", {colspan: "2"}).append($("<textarea/>", {text: page.template})))
+          .append($("<td/>", {colspan: 4}).append($("<textarea/>", {text: page.template})))
         )
       }
       var curUrl = location.href;
@@ -545,13 +558,15 @@ function toggleMultipageScraping(){
 function regenerateMultipageTemplate(){
   var pages = [];
   var tds = $(prfid+"multipagetable tr td");
-  for (var i=2; i < tds.length; i+=10) {
+  for (var i=2; i < tds.length; i+=14) {
     pages.push({
-      url: tds[i+1].getElementsByTagName("input")[0].value,
-      test: tds[i+4].getElementsByTagName("input")[0].value,
-      repeat: tds[i+5].getElementsByTagName("input")[0].checked,
-      post: tds[i+7].getElementsByTagName("input")[0].value,
-      template: tds[i+9].getElementsByTagName("textarea")[0].value
+      url:      tds[i+ 1].getElementsByTagName("input")[0].value,
+      post:     tds[i+ 4].getElementsByTagName("input")[0].value,
+      test:     tds[i+ 6].getElementsByTagName("input")[0].value,
+      repeat:   tds[i+ 7].getElementsByTagName("input")[0].checked,
+      loopvar:  tds[i+ 9].getElementsByTagName("input")[0].value,
+      looplist: tds[i+11].getElementsByTagName("input")[0].value,
+      template: tds[i+13].getElementsByTagName("textarea")[0].value
     });
   }
 
@@ -566,16 +581,25 @@ function regenerateMultipageTemplate(){
     res += '  <page><template>{' + vars + '}</template></page>\n\n';
   }
   for (var i=0;i < pages.length; i++){
-    res += '  <page url="' + encodeXMLAttribute(pages[i].url)+'"';
-    if (pages[i].test != "") res += ' test="'+pages[i].test+'" ';
-    if (pages[i].repeat == true) res += ' repeat="true"';
-    res += ">\n";
+    if (pages[i].repeat)
+      res += ' <loop '+encodeXMLAttributes({
+        "var": pages[i].loopvar != "" ? pages[i].loopvar : null,
+        list: pages[i].looplist != "" ? pages[i].looplist : null,
+        test: pages[i].test != "" ? pages[i].test : null
+      }) + '>\n';
+    res += '  <page '+encodeXMLAttributes({
+      url: pages[i].url, 
+      test: !pages[i].repeat && pages[i].test != "" ? pages[i].test : null
+    })+'>\n';
     if (pages[i].post != "") 
       res += "    <post>"+encodeXMLAttribute(pages[i].post)+"</post>\n";
     if (pages[i].template != "") {
       res += "    <template>\n" + pages[i].template + "\n    </template>\n";
     }
-    res += "  </page>\n\n";
+    res += "  </page>\n";
+    if (pages[i].repeat)
+      res += " </loop>\n";
+    res += "\n";
   }
   res += "</action>";
   $(prfid+"multipagetemplate").val(res);
@@ -1117,6 +1141,15 @@ function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
 
 function encodeXMLAttribute(s) {
   return s.replace( /&/g, '&amp;').replace( /"/g, '&quot;').replace( /</g, '&lt;');
+}
+function encodeXMLAttributes(o) {
+  var res = "";
+  for (var i in o) {
+    if (o[i] == null) continue;
+    if (res != "") res += " ";
+    res += i + "=\"" + encodeXMLAttribute(o[i]) + "\"";
+  }
+  return res;
 }
 
 function encodeNodeTags(node, close){
