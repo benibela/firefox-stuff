@@ -189,6 +189,37 @@ var prf = "__scraper_";
 var prfid = "#__scraper_";
 var multipageInitialized = false;
 var mainInterface = null;
+var changedBody = false;
+
+   
+function moveLeft(e){
+  $(prfid + "moveleft").hide();
+  $(prfid + "moveright").show();
+  mainInterface.css("left", "0px");
+  mainInterface.css("right", "");
+  mainInterface.css("top", "0px");
+  mainInterface.css("width", "25%");
+  mainInterface.css("height", "100%");
+  GM_setValue(prf+"guiposition", "left");
+  
+  $(document.body.parentNode).css("position", "absolute").css("left", "26%").css("width", "75%");
+  //TODO: move fixed
+  changedBody = true;
+}
+
+function moveRight(e){
+  $(prfid + "moveleft").show();
+  $(prfid + "moveright").hide();
+  mainInterface.css("top", "0");
+  mainInterface.css("left", "");
+  mainInterface.css("right", "0px");
+  mainInterface.css("width", "25%");
+  mainInterface.css("height", "100%");
+  GM_setValue(prf+"guiposition", "right");
+
+  $(document.body.parentNode).css("position", "absolute").css("left", "0").css("width", "74%");
+  changedBody = true;
+}
 
 function makeinput(caption, id, value){ 
   var overridenValue = value;
@@ -277,7 +308,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
                "background-color: white; "+ 
                "color: black;" +
                "padding: 2px;"+
-               "z-index: 100000;"+
+               "z-index: 2147483647;"+ //maximal z-index (yes, there are pages close to this value)
                "overflow: auto;"+
                "overflow-x: hidden;"+
                "max-height: 95%",
@@ -285,37 +316,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       });
       mainInterface.appendTo("body");
       
-      
-      var changedBody = false;
-      
-      function moveLeft(e){
-        $(prfid + "moveleft").hide();
-        $(prfid + "moveright").show();
-        mainInterface.css("left", "0px");
-        mainInterface.css("right", "");
-        mainInterface.css("top", "0px");
-        mainInterface.css("width", "25%");
-        mainInterface.css("height", "100%");
-        GM_setValue(prf+"guiposition", "left");
-        
-        $(document.body.parentNode).css("position", "absolute").css("left", "26%").css("width", "75%");
-        //TODO: move fixed
-        changedBody = true;
-      }
-      
-      function moveRight(e){
-        $(prfid + "moveleft").show();
-        $(prfid + "moveright").hide();
-        mainInterface.css("top", "0");
-        mainInterface.css("left", "");
-        mainInterface.css("right", "0px");
-        mainInterface.css("width", "25%");
-        mainInterface.css("height", "100%");
-        GM_setValue(prf+"guiposition", "right");
-
-        $(document.body.parentNode).css("position", "absolute").css("left", "0").css("width", "74%");
-        changedBody = true;
-      }
+         
       
       var harness = $('<div/>', {style:"border:none; max-height: 100%; overflow: auto; background-color: #EEEEEE"}).mousedown(function(e){
         if (e.target != this) return;
@@ -423,21 +424,21 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       } //by Colin Snover
 
 //alert(localStorage[prf+"guiposition"]);
-      if (GM_getValue(prf+"guiposition") == "left") moveLeft(); 
-      else if (GM_getValue(prf+"guiposition") == "right") moveRight();
-      else if (GM_getValue(prf+"guiposition") == "free") {
-        $(prfid + "moveright").show();
-        var pos = GM_getValue(prf+"guicoordinates");
-        if (pos) {
-          pos = JSON.parse(pos);
-          mainInterface.css("left", pos[0]).css("top", pos[1]);//.width(pos[2]);//.height(pos[3]);
-        } else mainInterface.css("right", "10px");
-      }
       
       //  $( prfid + "moveleft").click(); works, but then causes an exception :(
     } else mainInterface.show();
     $(prfid+"activation").hide();
-    
+
+    if (GM_getValue(prf+"guiposition") == "left") moveLeft(); 
+    else if (GM_getValue(prf+"guiposition") == "right") moveRight();
+    else if (GM_getValue(prf+"guiposition") == "free") {
+      $(prfid + "moveright").show();
+      var pos = GM_getValue(prf+"guicoordinates");
+      if (pos) {
+        pos = JSON.parse(pos);
+        mainInterface.css("left", pos[0]).css("top", pos[1]);//.width(pos[2]);//.height(pos[3]);
+      } else mainInterface.css("right", "10px");
+    }
   }
 }
 
@@ -445,6 +446,10 @@ function deactivateScraper(){
   localStorage[prf+"_deactivated"] = true;
   $(prfid+"activation").show();
   mainInterface.hide();
+  if (changedBody) {
+    $(document.body.parentNode).css("left", "0").css("width", "100%");
+    changedBody = false;
+  }
 }
 
 
@@ -481,6 +486,7 @@ function toggleMultipageScraping(){
               table.removeChild(row.nextSibling);
               table.removeChild(row.nextSibling);
               table.removeChild(row);
+              regenerateMultipageTemplate();
             }}))
             .append($("<span/>", {text: " URL:"}))
            )
@@ -1369,7 +1375,7 @@ $("<div/>",{
          "right: 10px; top: 10px; " +
          "border: 2px solid red; " +
          "background-color: white; "+ 
-         "cursor: pointer; padding: 2px; z-index: 100000",
+         "cursor: pointer; padding: 2px; z-index: 2147483647",
   id: prf + "activation",
   click:  activateScraper
 }).appendTo("body");
