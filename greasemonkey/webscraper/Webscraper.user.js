@@ -666,6 +666,7 @@ function removeNodeButKeepChildren(n, local){
   var nid = $(n).attr("id");
   p.removeChild(n);
   if (local) return;
+
   if (n == window.searchingRepetition) window.searchingRepetition = null;
   if ($(n).data(prf+"repetition")) {
     removeNodeButKeepChildren(document.getElementById($(n).data(prf+"repetition")));
@@ -1019,7 +1020,7 @@ function addSelectionToTemplate(){
                .append(spanner().text(":="))
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
-             .append(maketinybutton(prf+"btnkill", "X", function(e){removeNodeButKeepChildren(this.parentNode.parentNode.parentNode.parentNode); regenerateTemplateQueued(); }))
+             .append(maketinybutton(prf+"btnkill", "X", function(e){var readTag = this.parentNode.parentNode.parentNode.parentNode; removeNodeButKeepChildren(readTag); regenerateTemplateQueued(); e.preventDefault(); }))
             // .append("<br/>")
              .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
              .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead"));}))
