@@ -191,6 +191,7 @@ var multipageInitialized = false;
 var mainInterface = null;
 var changedBody = false;
 
+
    
 function moveLeft(e){
   $(prfid + "moveleft").hide();
@@ -886,7 +887,7 @@ function addSelectionToTemplate(){
     var cur = templateRead.parentNode;
     var kids = cur.childNodes;
     var tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
-    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);       
+    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);       //auto created elements don't have attributes
     var i = indexOfNode(kids, templateRead);
     
     if (!ignoreTag && kids.length == 1) value = ".";
@@ -1097,6 +1098,11 @@ function filterNodeAttributes(node){
   return res;
 }
 
+function objHasProperties(obj){
+  for (var i in obj) return true;
+  return false;
+}
+
 function fitElements(t, h){ //template vs. html element
   if (t.nodeName != h.nodeName) return false;
   return fitElementTemplate(t.nodeName, filterNodeAttributes(t), h);
@@ -1121,6 +1127,11 @@ function fitElementTemplate(tn, att, h){ //template node name, template attribut
   return true;
 }
 
+var TemplateShortRead = 1;
+var TemplateLoop = 2;
+var TemplateMatchNode = 3;
+var TemplateMatchText = 4; 
+
 //(simplified) template matching
 function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
   //TODO: optimize (e.g. gather all that match last, gather all that match last-1 and have parents in the 1st set,...). Matching again to all children is crazy
@@ -1139,7 +1150,71 @@ function canMatchPseudoTemplate(templateNodes, templateNodeLength, tocheck){
   return false;
 }
 
+function findTemplateMatchingNodes(template, start) {
+  //find all self-or-descendants::* matching template (ignoring children)
+  var firstLevelMatches = new Array;
+  function recElement(node){
+    if (fitElementTemplate(template.value, template.attributes, node)) firstLevelMatches.push(node);
+    var kids = node.childNodes;
+    for (var i=0;i<kids.length;i++)
+      recElement(kids[i]);
+  }
+  function recText(node){
+    if (node.nodeType == Node.TEXT_NODE) {
+      if (node.nodeValue.trim() == template.value)
+        firstLevelMatches.push(node);
+    } else {
+      var kids = node.childNodes;
+      for (var i=0;i<kids.length;i++)
+        recText(kids[i]);
+    }
+  }
+  
+  if (template.kind == TemplateMatchNode) recElement(start);
+  else if (template.kind == TemplateMatchText) recText(start);
+  else return [];
+  
+  if (!template.children || template.children.length == 0) return firstLevelMatches;
+  
+  
+  //find all matches for all children
+  var kidsMatches = new Array();
+  
+  for (var i = 0; i < template.children.length; i++) {
+    var doMatch = ((!template.children[i].templateAttributes || !template.children[i].templateAttributes.optional) 
+               && (template.children[i].kind == TemplateMatchText || template.children[i].kind == TemplateMatchNode));
+    if (!doMatch) 
+      kidsMatches.push(null);
+    else {
+      kidsMatches.push(findTemplateMatchingNodes(template.children[i], start)); //This is only called once for every template element 
+      if (kidsMatches[kidsMatches.length-1].length == 0) return [];
+    }
+  }
+  
+  firstLevelMatches.filter(function(node){
+    var okay = true;
+    var laterKids = new Array();
+    for (var i = 0; i < node.children.length; i++)
+      if (kidsMatches[i] != null) {
+        var newMatches = kidsMatches[i].filter(function(n){ return n != node && node.compareDocumentPosition(n) & 16 == 16; });
+        if (newMatches.length == 0) return false;
+        laterKids.push(newMatches);
+      }
+    for (var i = laterKids.length-1; i>=0; i--) 
+      for (var j = laterKids.length-1; j>i; j--) {
+        while ((laterKids[i][laterKids[i].length-1].compareDocumentPosition(laterKids[j][laterKids[j].length-1]) & 4) != 4) { //UNLESS laterKids[i].last < laterKids[j].last  
+          laterKids[i].pop();
+          if (laterKids[i].length == 0) return false;
+        }
+      }
+   return true;
+  });
+  
+  return firstLevelMatches;
+}
+
 function encodeXMLAttribute(s) {
+  if (s instanceof Array) s = s.join(" ");
   return s.replace( /&/g, '&amp;').replace( /"/g, '&quot;').replace( /</g, '&lt;');
 }
 function encodeXMLAttributes(o) {
@@ -1193,10 +1268,180 @@ function regenerateTemplateQueuedDo(callTime){
   regenerateTemplate();
 }
 
+
 function regenerateTemplate(){
+
+
   updateRegexps();
   
-  function serializeAll(cur){
+  function regenerateTemplateRec(cur){
+    var kids = cur.childNodes;
+    var res = new Array();
+    var lastFoundTemplate = -1;
+    var i = 0;
+    var useSiblings = false;
+    var fullSpecified = true;
+    var hasReadTag = false;
+    var allOptional = true;
+    var hasOptional = false;
+    var optionals = new Array();
+    for (i=0;i<kids.length;i++) {
+      if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
+
+      var newTemplate = null;
+      var templateSpecific = false;
+      var matchChildren = false;
+      if (kids[i].classList && kids[i].classList.contains(prf+"templateRead")) {
+        if (kids[i].classList.contains(prf+"templateReadRepetition")) 
+          continue;
+       
+        hasReadTag = true;
+        
+        var read = $("." + prf + "read_var", kids[i]).val();
+        if (read != "") read += " := ";
+
+        read += $("." + prf + "read_source", kids[i]).val();
+        
+        newTemplate = [{
+         kind: TemplateShortRead,
+         value: read,
+         attributes: {},
+         children: [],
+         templateAttributes: {}
+        }];
+        
+       
+       
+        var optional = $("."+prf+"read_optional", kids[i]).is(':checked');
+        allOptional = allOptional && optional;
+        hasOptional = hasOptional || optional;
+        optionals.push(optional);
+        matchChildren = $("."+prf+"read_match_children", kids[i]).is(':checked');
+      } else { 
+        var x = regenerateTemplateRec(kids[i]); 
+        if (x.template && x.template.length > 0) {
+          newTemplate = x.template;
+          allOptional = allOptional && x.optional;
+          hasOptional = hasOptional || x.optional;
+          optionals.push(x.optional);
+          templateSpecific = x.fullSpecified && !x.optional;
+        } 
+      }
+      if (newTemplate != null) {
+        if (siblingsinclmode == 1 && newTemplate.length > 0 && !templateSpecific) {
+          var testTemplate = newTemplate[0];
+          if (testTemplate.kind == TemplateLoop && testTemplate.children.length > 0) 
+            testTemplate = testTemplate.children[0];
+          for (var j = lastFoundTemplate + 1; j < i; j++)
+            if (testTemplate.kind == TemplateShortRead 
+             || testTemplate.kind == TemplateLoop 
+             || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0)
+              res.push(kids[j]);
+        }
+        if (matchChildren) 
+          for (var j=0;j<kids[i].childNodes.length;j++)
+             res.push(kids[i].childNodes[j]);
+        fullSpecified = fullSpecified && templateSpecific;
+        lastFoundTemplate = i;
+        res.push(newTemplate);
+      } else if (siblingsinclmode == 0) //always
+        res.push(kids[i]);
+    }
+    
+    if (lastFoundTemplate == -1) return {template: []};
+
+    var p = 0;
+    var restemplate = [];
+    //alert(res.toSource());
+    for (var i=0;i<res.length;i++) {
+      if (res[i] == null) continue;
+      if (res[i] instanceof Array) {
+        for (var j = 0; j < res[i].length; j++) {
+          if (!allOptional && optionals[p])
+            res[i][j].templateAttributes.optional = true;
+          restemplate.push(res[i][j]);
+        }
+        p+=1;
+      } else if ( res[i].nodeType == Node.TEXT_NODE) {
+          //if (i ) if (i == 0 || typeof res[i-1] != "string"){  //don't add following text nodes, they wouldn't be matched ??????
+          var temp = res[i].textContent.trim();
+          if (temp != "") {
+            restemplate.push({
+             kind: TemplateMatchText,
+             value: temp,
+             attributes: {},
+             children: [],
+             templateAttributes: {}
+            });
+          }
+      } else if (res[i].nodeType == Node.ELEMENT_NODE) {
+          var obj = {
+           kind: TemplateMatchNode,
+           value: res[i].nodeName,
+           attributes: filterNodeAttributes(res[i]),
+           children: [],
+           templateAttributes: {}
+          };
+          restemplate.push(obj);
+      }     
+    }
+    
+    
+    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);    
+     
+    if (!ignoreTag) {
+      restemplate = [{
+       kind: TemplateMatchNode,
+       value: cur.nodeName,
+       attributes: filterNodeAttributes(cur),
+       children: restemplate,
+       templateAttributes: {}
+      }];
+
+      if (objHasProperties(restemplate[0].attributes)) {
+        if (restemplate[0].attributes.id != null) fullSpecified = true;
+      }
+
+    }
+    
+    if (cur.classList && cur.classList.contains(prf+"templateLoop")) {
+      restemplate = [{
+        kind: TemplateLoop,
+        value: "",
+        attributes: {},
+        children: restemplate,
+        templateAttributes: {}
+       }];
+    }     
+// 
+    return {template: restemplate, 
+            fullSpecified: fullSpecified, 
+            optional: allOptional};
+  }
+  
+  var res = regenerateTemplateRec(document.body);
+  
+  if (res.optional)
+    for (var i=0;i<res.template.length;i++)
+      res.template[i].templateAttributes.optional = true;
+
+  for (var i=0;i<res.template.length;i++) if (res.template[i].value == "BODY") res.template[i].attributes = {}; //don't need to check attributes on body
+
+  
+  var finalRes = serializeTemplate(res.template);
+  
+  $(prfid + "template").val( finalRes );
+  
+  if ($(prfid+"multipage").css("display") != "none") {
+    $(prfid+"multipagetable textarea").last().val( finalRes );
+    regenerateMultipageTemplate();
+  }
+  
+  updatedTime = new Date().getTime();
+}
+
+
+ /* function serializeAll(cur){
     if (cur.nodeType == Node.TEXT_NODE) return cur.nodeValue;
     if (cur.classList && (cur.classList.contains(prf+"templateRead") || cur.classList.contains(prf+"read_options"))) return "";
     var kids = cur.childNodes;
@@ -1207,129 +1452,42 @@ function regenerateTemplate(){
     res += "</"+cur.nodeName+">\n";
     return res;
   }
-  
-  function regenerateTemplateRec(cur){
-    var kids = cur.childNodes;
-    var res = new Array();
-    var foundSomething = -1;
-    var i = 0;
-    var useSiblings = false;
-    var fullSpecificied = true;
-    var hasReadTag = false;
-    var allOptional = true;
-    var hasOptional = false;
-    var optionals = new Array();
-    for (i=0;i<kids.length;i++) {
-      if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
-      var t;
-      if (kids[i].classList && kids[i].classList.contains(prf+"templateRead")) {
-        if (kids[i].classList.contains(prf+"templateReadRepetition")) {
-          res.push(null);
-          continue;
-        }
-        hasReadTag = true;
-        var optional = $("."+prf+"read_optional", kids[i]).is(':checked');
-        var match_children = $("."+prf+"read_match_children", kids[i]).is(':checked');
-        var noTextNodes = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE || kids[i-1].nodeValue.trim() == "" ) && 
-                          (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE || kids[i+1].nodeValue.trim() == "" );
-        if (noTextNodes && !match_children) t = "{";
-        else { t = "<t:s>"; useSiblings = true; }
-        
-        var name = $("." + prf + "read_var", kids[i]).val();
-        if (name != "") t += name + " := ";
-        
-        t += $("." + prf + "read_source", kids[i]).val();;
-        
-        if (noTextNodes && !match_children) t += "}";
-        else t += "</t:s>";
-        if (match_children) { 
-          for (var j=0;j<kids[i].childNodes.length;j++) t+=serializeAll(kids[i].childNodes[j]);
-          if (t != "")  fullSpecificied = true;
-        } else fullSpecificied  = false;
-        
-        res.push(t);
-        allOptional = allOptional && optional;
-        hasOptional = hasOptional || optional;
-        optionals.push(optional);
-        foundSomething = i;
-      } else { 
-        var x = regenerateTemplateRec(kids[i]); 
-        t = x[0];
-        if (t == "") res.push(kids[i]);
-        else {
-          if ( !x[1]) fullSpecificied = false; 
-          allOptional = allOptional && x[2];
-          hasOptional = hasOptional || x[2];
-          optionals.push(x[2]);
-          res.push(t);
-          foundSomething = i;
-        }
-      }
-    }
-    
-    if (foundSomething == -1) return ["",false,false];
-
-    if (!fullSpecificied) useSiblings = true;
-    
-    if (siblingsinclmode == 0) useSiblings = true;
-    if (siblingsinclmode == 2) useSiblings = false;
-    
-//    console.log(res);
-    var becameSpecific = false;
-    var looping = false;
-    var res2 = "";
-    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);    
-    if (cur.classList && cur.classList.contains(prf+"templateLoop")) {
-      ignoreTag = false;
-      looping = true;
-      res2 += "<t:loop>\n";
-    }
-    if (!ignoreTag) {
-      res2 += encodeNodeTags(cur);
-      if (res2.indexOf("=") > 0 && (cur.hasAttribute("id") || (cur.nodeName != "TD" && cur.nodeName != "TR")))
-        becameSpecific = true;
-      if ((useSiblings && foundSomething > 0) || !hasReadTag) res2 += "\n";
-    }
-    var p = 0;
-    for (var i=0;i<=foundSomething;i++) {
-      if (res[i] == null) continue;
-      if ((typeof res[i]) == "string") {
-        if (hasOptional && !allOptional && optionals[p]) 
-          res2 += res[i].replace(/([^/])>/, '$1 t:optional="true">') //TODO fix it for multiple childrens
-        else 
-          res2 += res[i];
-        p+=1;
-      } else if (useSiblings) {
-        if ( res[i].nodeType != Node.TEXT_NODE) {
-          var temp = encodeNodeTags(res[i], true);
-          res2 += temp;
-          if (temp.indexOf("=") > 0) becameSpecific = true;
-        } else if (i == 0 || typeof res[i-1] != "string"){  //don't add following text nodes, they wouldn't be matched
-          var temp = res[i].textContent.trim();
-          res2 += temp;
-          if (temp != "") becameSpecific = true;
-        }
-      }
-    }
-    if (!ignoreTag) res2 += "</"+cur.nodeName+">\n";
-
-    if (looping) res2 += "</t:loop>\n";
-    
-    return [res2, fullSpecificied || becameSpecific, allOptional];
+  */
+function serializeTemplate(templates) {
+  var res = "";
+  function addSurrounded(s) {
+    if (s == "") return;
+    if (s[s.length-1] == '\n') res += "\n";
+    res += s;  
   }
-  
-  var res = regenerateTemplateRec(document.body);
-  
-  if (res[2]) res[0] = res[0].replace(/([^/])>/, '$1 t:optional="true">') //everything is optional
-  
-  $(prfid + "template").val( res[0] );
-  
-  if ($(prfid+"multipage").css("display") != "none") {
-    $(prfid+"multipagetable textarea").last().val(res[0]);
-    regenerateMultipageTemplate();
+  for (var i=0;i<templates.length;i++) {
+    if (templates[i].kind == TemplateMatchNode) {
+      res += "<" + templates[i].value;
+      if (objHasProperties(templates[i].attributes)) res += " " + encodeXMLAttributes(templates[i].attributes);
+      if (templates[i].templateAttributes.optional) res += " t:option=\"true\"";
+      if (templates[i].children.length == 0) res += "/>\n";
+      else {
+        res+=">";
+        addSurrounded(serializeTemplate(templates[i].children));
+        res+="</"+templates[i].value+">\n"; 
+      }
+    } else if (templates[i].kind == TemplateMatchText) {
+      res += templates[i].value;
+    } else if (templates[i].kind == TemplateLoop) {
+      res += "<t:loop>";
+      addSurrounded(serializeTemplate(templates[i].children));
+      res += "</t:loop>\n";
+    } else if (templates[i].kind == TemplateShortRead) {
+      var shortNotation = ((i == 0 || templates[i-1].kind != TemplateMatchText) 
+                        && (i == templates.length-1 || templates[i+1].kind != TemplateMatchText));
+      if (shortNotation) res += "{";
+      else res += "<t:s>";
+      res += templates[i].value;
+      if (shortNotation) res += "}";
+      else res += "</t:s>";
+    }
   }
-  
-  updatedTime = new Date().getTime();
+  return res;
 }
 
 
