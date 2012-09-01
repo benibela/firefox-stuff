@@ -1505,21 +1505,29 @@ function UNIT_TESTS(){  // 👈🌍👉
     
     var range = null;
     var ranges = [];
+    var reprange = null;
+    var repranges = [];
     
     function rec(node){
       if (node.nodeType == Node.ELEMENT_NODE) {
         for (var i=0;i<node.childNodes.length;i++)
           rec(node.childNodes[i]);
       } else if (node.nodeType == Node.TEXT_NODE) {
-        var pos = [];
+        function extract(c){
+          var pos = [];
         
-        var f = node.nodeValue.indexOf("|");
-        while ( f > -1) {
-          pos.push(f);
-          if (f > -1) 
-            node.nodeValue = node.nodeValue.substr(0,f) + node.nodeValue.substr(f+1); 
-          f =  node.nodeValue.indexOf("|");
+          var f = node.nodeValue.indexOf(c);
+          while ( f > -1) {
+            pos.push(f);
+            if (f > -1) 
+              node.nodeValue = node.nodeValue.substr(0,f) + node.nodeValue.substr(f+1); 
+            f =  node.nodeValue.indexOf(c);
+          }
+          return pos;
         }
+        
+        var pos = extract("|");
+        var reppos = extract("#");
 
         for (var i=0;i<pos.length;i++){
           if (range == null) {
@@ -1529,6 +1537,17 @@ function UNIT_TESTS(){  // 👈🌍👉
             range.setEnd(node, pos[i]);
             ranges.push(range);
             range = null;
+          }
+        }
+
+        for (var i=0;i<reppos.length;i++){
+          if (reprange == null) {
+            reprange = document.createRange();
+            reprange.setStart(node, reppos[i]);
+          } else {
+            reprange.setEnd(node, reppos[i]);
+            repranges.push(reprange);
+            reprange = null;
           }
         }
       }
@@ -1542,6 +1561,18 @@ function UNIT_TESTS(){  // 👈🌍👉
       sel.addRange(ranges[i]);
       addSelectionToTemplate();
     }
+    
+    for (var i=0;i<repranges.length;i++) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(repranges[i]);
+      
+      window.searchingRepetition = $($("."+prf+"templateRead").get(i)); 
+
+      
+      addSelectionToTemplate();
+    }
+    
     regenerateTemplate();
     
     if (output.indexOf('id="') < 0) 
@@ -1556,7 +1587,7 @@ function UNIT_TESTS(){  // 👈🌍👉
   
   
   
-  
+  /*
   t('<a><b>|Dies wird Variable test|</b></a>', '<A>\n<B>{.}</B>\n</A>');
   t('<a><b>|Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
   t('<a>|<b>Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
@@ -1568,7 +1599,10 @@ function UNIT_TESTS(){  // 👈🌍👉
 
   t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>');
   t('<a>|<b>abc</b><c>dies kommt raus</c>|</a>', '<A>{.}</A>');
-
+*/
+  t('<a><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
+  t('<a><b>0</b><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<B/>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
+  
 }
 
 
