@@ -1492,6 +1492,52 @@ function serializeTemplate(templates) {
 }
 
 
+function UNIT_TESTS(){  // 👈🌍👉
+  if (!Node.ELEMENT_NODE) alert("initialization failed");
+
+  var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
+  testBox.appendTo(document.body);
+  function t(input, output){
+    testBox.html(input);
+    
+    var foundStart = false;
+    var foundEnd = false;
+    var range = document.createRange();
+    
+    function rec(node){
+      if (foundEnd) return;
+      if (node.nodeType == Node.ELEMENT_NODE) {
+        for (var i=0;i<node.childNodes.length;i++)
+          rec(node.childNodes[i]);
+      } else if (node.nodeType == Node.TEXT_NODE) {
+        var pos = node.nodeValue.indexOf("|");
+        if (pos == -1) return;
+        //alert(node.nodeValue);
+        node.nodeValue = node.nodeValue.substr(0,pos) + node.nodeValue.substr(pos+1); 
+        if (!foundStart) { foundStart = true; range.setStart(node, pos);}
+        else if (!foundEnd) { foundEnd = true; range.setEnd(node, pos);}
+
+        var pos = node.nodeValue.indexOf("|");
+        if (pos == -1) return;
+        node.nodeValue = node.nodeValue.substr(0,pos) + node.nodeValue.substr(pos+1); 
+        foundEnd = true; 
+        range.setEnd(node, pos);        
+      }      
+    }
+    
+    rec(document.getElementById("XXX_YYY_ZZZ_TESTBOX"));
+
+    window.getSelection().addRange(range);
+    addSelectionToTemplate();
+  }
+  
+  
+  
+  
+  t('<a><b>|Dies wird Variable test|</b></a>', '<a>\n<b>{.}</b>\n</a>');
+}
+
+setTimeout(UNIT_TESTS, 200);
 
 /*Templategeneration guide lines:
 
