@@ -1527,14 +1527,25 @@ function UNIT_TESTS(){  // 👈🌍👉
     
     rec(document.getElementById("XXX_YYY_ZZZ_TESTBOX"));
 
+    window.getSelection().removeAllRanges();
     window.getSelection().addRange(range);
+    
     addSelectionToTemplate();
+    regenerateTemplate();
+    
+    if (output.indexOf('id="') < 0) 
+      output = '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n' + output + '\n</DIV>';
+    output += "\n";
+    
+    var got = $(prfid + "template").val();
+    
+    if (got != output) alert("Got: "+got+"\n------------------\nExpected: "+output);
   }
   
   
   
   
-  t('<a><b>|Dies wird Variable test|</b></a>', '<a>\n<b>{.}</b>\n</a>');
+  t('<a><b>|Dies wird Variable test|</b></a>', '<A>\n<B>{.}</B>\n</A>');
 }
 
 
