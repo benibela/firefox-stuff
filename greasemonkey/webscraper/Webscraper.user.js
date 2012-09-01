@@ -243,7 +243,7 @@ function activateScraper(){
 '<table id="'+prf+'optiontable" style="display:none">' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
-makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|highlight|active|[0-9]|"+prf+").*")+
+makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|hover|highlight|active|[0-9]|"+prf+").*")+
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
@@ -1388,7 +1388,7 @@ function regenerateTemplate(){
     }
     
     
-    var ignoreTag = !cur.hasAttributes() && tagsexcl.test(cur.nodeName);    
+    var ignoreTag = fullSpecified || (!cur.hasAttributes() && tagsexcl.test(cur.nodeName));
      
     if (!ignoreTag) {
       restemplate = [{
@@ -1493,7 +1493,7 @@ function serializeTemplate(templates) {
 
 
 function UNIT_TESTS(){  // 👈🌍👉
-  if (!Node.ELEMENT_NODE) alert("initialization failed");
+  if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
 
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
@@ -1537,7 +1537,6 @@ function UNIT_TESTS(){  // 👈🌍👉
   t('<a><b>|Dies wird Variable test|</b></a>', '<a>\n<b>{.}</b>\n</a>');
 }
 
-setTimeout(UNIT_TESTS, 200);
 
 /*Templategeneration guide lines:
 
@@ -1624,6 +1623,9 @@ if (!localStorage[prf+"_deactivated"]) {
     document.getElementById(prf+"multipagecheckbox").checked = true;
     toggleMultipageScraping();
   }
+
+
+  setTimeout(UNIT_TESTS, 50);
 }
 
 if (GM_getValue("optionTableDisplay", "none") != "none") {
