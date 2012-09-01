@@ -18,6 +18,8 @@
  *                                                                         *
  ***************************************************************************/
 
+//\newcommand{\n}{new line} is it wise to write js in a tex editor??
+
 //******************************************************************************
 //Dragging library
 //*****************************************************************************
@@ -1497,40 +1499,49 @@ function UNIT_TESTS(){  // 👈🌍👉
 
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
+  var testi = 0;
   function t(input, output){
     testBox.html(input);
     
-    var foundStart = false;
-    var foundEnd = false;
-    var range = document.createRange();
+    var range = null;
+    var ranges = [];
     
     function rec(node){
-      if (foundEnd) return;
       if (node.nodeType == Node.ELEMENT_NODE) {
         for (var i=0;i<node.childNodes.length;i++)
           rec(node.childNodes[i]);
       } else if (node.nodeType == Node.TEXT_NODE) {
-        var pos = node.nodeValue.indexOf("|");
-        if (pos == -1) return;
-        //alert(node.nodeValue);
-        node.nodeValue = node.nodeValue.substr(0,pos) + node.nodeValue.substr(pos+1); 
-        if (!foundStart) { foundStart = true; range.setStart(node, pos);}
-        else if (!foundEnd) { foundEnd = true; range.setEnd(node, pos);}
+        var pos = [];
+        
+        var f = node.nodeValue.indexOf("|");
+        while ( f > -1) {
+          pos.push(f);
+          if (f > -1) 
+            node.nodeValue = node.nodeValue.substr(0,f) + node.nodeValue.substr(f+1); 
+          f =  node.nodeValue.indexOf("|");
+        }
 
-        var pos = node.nodeValue.indexOf("|");
-        if (pos == -1) return;
-        node.nodeValue = node.nodeValue.substr(0,pos) + node.nodeValue.substr(pos+1); 
-        foundEnd = true; 
-        range.setEnd(node, pos);        
-      }      
+        for (var i=0;i<pos.length;i++){
+          if (range == null) {
+            range = document.createRange();
+            range.setStart(node, pos[i]);
+          } else {
+            range.setEnd(node, pos[i]);
+            ranges.push(range);
+            range = null;
+          }
+        }
+      }
     }
     
     rec(document.getElementById("XXX_YYY_ZZZ_TESTBOX"));
 
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    
-    addSelectionToTemplate();
+    for (var i=0;i<ranges.length;i++) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(ranges[i]);
+      addSelectionToTemplate();
+    }
     regenerateTemplate();
     
     if (output.indexOf('id="') < 0) 
@@ -1539,13 +1550,25 @@ function UNIT_TESTS(){  // 👈🌍👉
     
     var got = $(prfid + "template").val();
     
-    if (got != output) alert("Got: "+got+"\n------------------\nExpected: "+output);
+    testi += 1;
+    if (got != output) alert("Test: "+testi +"\nGot: "+got+"\n------------------\nExpected: "+output);
   }
   
   
   
   
   t('<a><b>|Dies wird Variable test|</b></a>', '<A>\n<B>{.}</B>\n</A>');
+  t('<a><b>|Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
+  t('<a>|<b>Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
+  t('<a><b>|Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
+  t('<a>|<b>Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
+  t('<a><b>Nicht Test</b><b>Test:</b><b>|Dies wird erneut Variable test2|</b></a>', '<A>\n<B/>\n<B/>\n<B>{.}</B>\n</A>');
+  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz|</b><b v="!">5</b></a>', '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>');
+  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz</b>|<b v="!">5</b></a>', '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>');
+
+  t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>');
+  t('<a>|<b>abc</b><c>dies kommt raus</c>|</a>', '<A>{.}</A>');
+
 }
 
 
@@ -1614,7 +1637,7 @@ GUI:
   */
   
   
-  
+
   
   
 $("<div/>",{
