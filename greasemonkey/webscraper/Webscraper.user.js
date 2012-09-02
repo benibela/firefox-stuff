@@ -1380,8 +1380,10 @@ function regenerateTemplate(){
              res.push([toPushReverse[j]]);
         }
         if (matchChildren) 
-          for (var j=0;j<kids[i].childNodes.length;j++)
-             res.push(kids[i].childNodes[j]);
+          for (var j=0;j<kids[i].childNodes.length-1;j++) {
+            var x = nodeToTemplate(kids[i].childNodes[j]);
+            if (x) res.push([x]);
+          }
         fullSpecified = fullSpecified && templateSpecific;
         lastFoundTemplate = i;
         res.push(newTemplate);
@@ -1411,7 +1413,7 @@ function regenerateTemplate(){
           restemplate.push(res[i][j]);
         }
         p+=1;
-      } else alert("????");
+      } else alert("????: "+res[i]+": "+res[i].toSource());
     }
     
     
@@ -1636,8 +1638,13 @@ function UNIT_TESTS(){  // 👈🌍👉
   t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia, skipping one requires two new rows, since the first row matches the header
   t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "7890 (.*)defghij xyz", 1)</t:s></X>');
   t('<a><b>|1|</b><c>|2|</c></a>', '<A>\n<B t:optional="true">{.}</B>\n<C>{.}</C>\n</A>', function(){$("."+prf+"templateRead ."+prf+"read_optional").first().prop("checked", "checked");});
-  t('<a id="test">|xyz|</a>', '<A id="test">{.}</A>');
-  
+  t('<a><b id="test">|xyz|</b></a>', '<B id="test">{.}</B>');
+  t('<a><b id="test">|xyz|</b><c>|abc|</c></a>', '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n<A>\n<B id="test">{.}</B>\n<C>{.}</C>\n</A>\n</DIV>');
+  t('<a><b>|hallo|</b></a>', '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead ."+prf+"read_match_children").first().prop("checked", "checked");});
+  t('<a><b>|123<x/>456|</b></a>', '<A>\n<B>{.}</B>\n</A>');   
+  t('<a><b>|123<x/>456|</b></a>', '<A>\n<B>123<X/>\n456<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); 
+//  t('<a><b>123<x/>456|foo<span>ood</span>bar|789<x/>012</b></a>', '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); not sure what this should become
+    
   $(prfid+"gui").css("background-color","#00FF00");
   
 }
