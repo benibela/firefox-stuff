@@ -1495,7 +1495,7 @@ function serializeTemplate(templates) {
     if (templates[i].kind == TemplateMatchNode) {
       res += "<" + templates[i].value;
       if (objHasProperties(templates[i].attributes)) res += " " + encodeXMLAttributes(templates[i].attributes);
-      if (templates[i].templateAttributes.optional) res += " t:option=\"true\"";
+      if (templates[i].templateAttributes.optional) res += " t:optional=\"true\"";
       if (templates[i].children.length == 0) res += "/>" + lineBreak;
       else {
         res+=">";
@@ -1594,8 +1594,7 @@ function UNIT_TESTS(){  // 👈🌍👉
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
-      
-      window.searchingRepetition = $($("."+prf+"templateRead").get(i)); 
+      window.searchingRepetition = $($("."+prf+"templateRead").get((i-1)/2)); 
      
       addSelectionToTemplate();
     }
@@ -1636,6 +1635,10 @@ function UNIT_TESTS(){  // 👈🌍👉
   t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>|Y|</code></td></tr><tr><td><code>??/</code></td><td><code>#\\#</code></td></tr><tr><td><code>??\'</code></td><td><code>^</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia
   t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia, skipping one requires two new rows, since the first row matches the header
   t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "7890 (.*)defghij xyz", 1)</t:s></X>');
+  t('<a><b>|1|</b><c>|2|</c></a>', '<A>\n<B t:optional="true">{.}</B>\n<C>{.}</C>\n</A>', function(){$("."+prf+"templateRead ."+prf+"read_optional").first().prop("checked", "checked");});
+  t('<a id="test">|xyz|</a>', '<A id="test">{.}</A>');
+  
+  $(prfid+"gui").css("background-color","#00FF00");
   
 }
 
