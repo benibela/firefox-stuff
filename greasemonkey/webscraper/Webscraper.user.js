@@ -273,6 +273,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               });
           }
         }))
+       .append(" ")
+       .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: true, click: regenerateTemplateQueued}))
+       .append(" use linebreaks")
        .append($("<br/>"))
        .append($("<textarea/>", {
          id: prf+'template',
@@ -1274,10 +1277,32 @@ function regenerateTemplateQueuedDo(callTime){
 
 function regenerateTemplate(){
 
-
   updateRegexps();
   
   function regenerateTemplateRec(cur){
+    function nodeToTemplate(node) {
+      if ( node.nodeType == Node.TEXT_NODE) {
+        var temp = node.textContent.trim();
+        if (temp == "") return null;
+        return {
+          kind: TemplateMatchText,
+          value: temp,
+          attributes: {},
+          children: [],
+          templateAttributes: {}
+        };
+      } else if (node.nodeType == Node.ELEMENT_NODE) {
+        return {
+         kind: TemplateMatchNode,
+         value: node.nodeName,
+         attributes: filterNodeAttributes(node),
+         children: [],
+         templateAttributes: {}
+        };
+      }
+      return null;
+    }
+  
     var kids = cur.childNodes;
     var res = new Array();
     var lastFoundTemplate = -1;
@@ -1288,6 +1313,8 @@ function regenerateTemplate(){
     var allOptional = true;
     var hasOptional = false;
     var optionals = new Array();
+    var foundRead = false;
+    var hasText = false;
     for (i=0;i<kids.length;i++) {
       if (kids[i].nodeType != Node.TEXT_NODE && kids[i].nodeType != Node.ELEMENT_NODE) continue;
 
@@ -1319,6 +1346,7 @@ function regenerateTemplate(){
         allOptional = allOptional && optional;
         hasOptional = hasOptional || optional;
         optionals.push(optional);
+        foundRead = true;
         matchChildren = $("."+prf+"read_match_children", kids[i]).is(':checked');
       } else { 
         var x = regenerateTemplateRec(kids[i]); 
@@ -1335,11 +1363,21 @@ function regenerateTemplate(){
           var testTemplate = newTemplate[0];
           if (testTemplate.kind == TemplateLoop && testTemplate.children.length > 0) 
             testTemplate = testTemplate.children[0];
-          for (var j = lastFoundTemplate + 1; j < i; j++)
+          var toPushReverse = [];
+          for (var j = i - 1; j > lastFoundTemplate; j--)
             if (testTemplate.kind == TemplateShortRead 
              || testTemplate.kind == TemplateLoop 
-             || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0)
-              res.push(kids[j]);
+             || (toPushReverse.length > 0 && findTemplateMatchingNodes(toPushReverse[toPushReverse.length-1], kids[j]).length > 0)
+             || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0) {
+               var x = nodeToTemplate(kids[j]);               
+               if (x.kind != TemplateMatchText) toPushReverse.push(x);
+               else if (!hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
+                 hasText = true;
+                 toPushReverse.push(x);
+               }
+           }
+           for (var j = toPushReverse.length - 1; j >= 0; j--)
+             res.push([toPushReverse[j]]);
         }
         if (matchChildren) 
           for (var j=0;j<kids[i].childNodes.length;j++)
@@ -1347,8 +1385,16 @@ function regenerateTemplate(){
         fullSpecified = fullSpecified && templateSpecific;
         lastFoundTemplate = i;
         res.push(newTemplate);
-      } else if (siblingsinclmode == 0) //always
-        res.push(kids[i]);
+      } else if (siblingsinclmode == 0) { //always
+        var x = nodeToTemplate(kids[i]);
+        if (x != null) {
+          if (x.kind != TemplateMatchText) res.push([x]);
+          else if (!hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
+            hasText = true;
+            res.push([x]);
+          }
+        }
+      }
     }
     
     if (lastFoundTemplate == -1) return {template: []};
@@ -1365,28 +1411,7 @@ function regenerateTemplate(){
           restemplate.push(res[i][j]);
         }
         p+=1;
-      } else if ( res[i].nodeType == Node.TEXT_NODE) {
-          //if (i ) if (i == 0 || typeof res[i-1] != "string"){  //don't add following text nodes, they wouldn't be matched ??????
-          var temp = res[i].textContent.trim();
-          if (temp != "") {
-            restemplate.push({
-             kind: TemplateMatchText,
-             value: temp,
-             attributes: {},
-             children: [],
-             templateAttributes: {}
-            });
-          }
-      } else if (res[i].nodeType == Node.ELEMENT_NODE) {
-          var obj = {
-           kind: TemplateMatchNode,
-           value: res[i].nodeName,
-           attributes: filterNodeAttributes(res[i]),
-           children: [],
-           templateAttributes: {}
-          };
-          restemplate.push(obj);
-      }     
+      } else alert("????");
     }
     
     
@@ -1457,10 +1482,13 @@ function regenerateTemplate(){
   }
   */
 function serializeTemplate(templates) {
+  var useLineBreaks = $(prfid + "useLineBreaks").is(":checked");
+  var lineBreak = useLineBreaks ? "\n" : "";
+
   var res = "";
   function addSurrounded(s) {
     if (s == "") return;
-    if (s[s.length-1] == '\n') res += "\n";
+    if (useLineBreaks && s[s.length-1] == '\n') res += "\n";
     res += s;  
   }
   for (var i=0;i<templates.length;i++) {
@@ -1468,18 +1496,18 @@ function serializeTemplate(templates) {
       res += "<" + templates[i].value;
       if (objHasProperties(templates[i].attributes)) res += " " + encodeXMLAttributes(templates[i].attributes);
       if (templates[i].templateAttributes.optional) res += " t:option=\"true\"";
-      if (templates[i].children.length == 0) res += "/>\n";
+      if (templates[i].children.length == 0) res += "/>" + lineBreak;
       else {
         res+=">";
         addSurrounded(serializeTemplate(templates[i].children));
-        res+="</"+templates[i].value+">\n"; 
+        res+="</"+templates[i].value+">" + lineBreak; 
       }
     } else if (templates[i].kind == TemplateMatchText) {
       res += templates[i].value;
     } else if (templates[i].kind == TemplateLoop) {
       res += "<t:loop>";
       addSurrounded(serializeTemplate(templates[i].children));
-      res += "</t:loop>\n";
+      res += "</t:loop>" + lineBreak;
     } else if (templates[i].kind == TemplateShortRead) {
       var shortNotation = ((i == 0 || templates[i-1].kind != TemplateMatchText) 
                         && (i == templates.length-1 || templates[i+1].kind != TemplateMatchText));
@@ -1500,25 +1528,26 @@ function UNIT_TESTS(){  // 👈🌍👉
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
   var testi = 0;
-  function t(input, output){
+  function t(input, output, special){
     testBox.html(input);
     
-    var range = null;
-    var ranges = [];
-    var reprange = null;
-    var repranges = [];
+    var rangepos = [];
+    var rangenodes = [];
+    var reprangepos = [];
+    var reprangenodes = [];
     
     function rec(node){
       if (node.nodeType == Node.ELEMENT_NODE) {
         for (var i=0;i<node.childNodes.length;i++)
           rec(node.childNodes[i]);
       } else if (node.nodeType == Node.TEXT_NODE) {
-        function extract(c){
+        function extract(c, dest, destNode){
           var pos = [];
         
           var f = node.nodeValue.indexOf(c);
           while ( f > -1) {
-            pos.push(f);
+            dest.push(f);
+            destNode.push(node);
             if (f > -1) 
               node.nodeValue = node.nodeValue.substr(0,f) + node.nodeValue.substr(f+1); 
             f =  node.nodeValue.indexOf(c);
@@ -1526,52 +1555,52 @@ function UNIT_TESTS(){  // 👈🌍👉
           return pos;
         }
         
-        var pos = extract("|");
-        var reppos = extract("#");
-
-        for (var i=0;i<pos.length;i++){
-          if (range == null) {
-            range = document.createRange();
-            range.setStart(node, pos[i]);
-          } else {
-            range.setEnd(node, pos[i]);
-            ranges.push(range);
-            range = null;
-          }
-        }
-
-        for (var i=0;i<reppos.length;i++){
-          if (reprange == null) {
-            reprange = document.createRange();
-            reprange.setStart(node, reppos[i]);
-          } else {
-            reprange.setEnd(node, reppos[i]);
-            repranges.push(reprange);
-            reprange = null;
-          }
-        }
+        extract("|", rangepos, rangenodes);
+        extract("#", reprangepos, reprangenodes);
       }
     }
     
     rec(document.getElementById("XXX_YYY_ZZZ_TESTBOX"));
 
-    for (var i=0;i<ranges.length;i++) {
+    for (var i=0;i<rangepos.length;i+=1  ) {
+      var range = document.createRange();
+      range.setStart(rangenodes[i], rangepos[i]);
+      i+=1;
+      range.setEnd(rangenodes[i], rangepos[i]);
+
       var sel = window.getSelection();
       sel.removeAllRanges();
-      sel.addRange(ranges[i]);
+      sel.addRange(range);
       addSelectionToTemplate();
+      
+      var j = i + 1;
+      if (j < rangenodes.length && rangenodes[j] == rangenodes[i]) {
+        var reads = document.getElementsByClassName(prf+"templateRead");
+        var newContainer = reads[reads.length-1].nextSibling;
+        while (j < rangenodes.length && rangenodes[j] == rangenodes[i]) {
+          rangenodes[j] = newContainer;
+          rangepos[j] -= rangepos[i];
+          j++;
+        }
+      }
     }
     
-    for (var i=0;i<repranges.length;i++) {
+    for (var i=0;i<reprangenodes.length;i++) {
+      var range = document.createRange();
+      range.setStart(reprangenodes[i], reprangepos[i]);
+      i+=1;
+      range.setEnd(reprangenodes[i], reprangepos[i]);
+
       var sel = window.getSelection();
       sel.removeAllRanges();
-      sel.addRange(repranges[i]);
+      sel.addRange(range);
       
       window.searchingRepetition = $($("."+prf+"templateRead").get(i)); 
-
-      
+     
       addSelectionToTemplate();
     }
+
+    if (special) special();
     
     regenerateTemplate();
     
@@ -1585,9 +1614,10 @@ function UNIT_TESTS(){  // 👈🌍👉
     if (got != output) alert("Test: "+testi +"\nGot: "+got+"\n------------------\nExpected: "+output);
   }
   
+  var ta = t;
+  t = function(a,b){};
   
   
-  /*
   t('<a><b>|Dies wird Variable test|</b></a>', '<A>\n<B>{.}</B>\n</A>');
   t('<a><b>|Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
   t('<a>|<b>Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
@@ -1599,9 +1629,13 @@ function UNIT_TESTS(){  // 👈🌍👉
 
   t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>');
   t('<a>|<b>abc</b><c>dies kommt raus</c>|</a>', '<A>{.}</A>');
-*/
+
   t('<a><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
   t('<a><b>0</b><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<B/>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
+  t('<a><ax>123124</ax><ax><b>525324</b></ax><ax><b>1</b></ax><ax><b>|3|</b></ax></a>', '<A>\n<AX/>\n<AX/>\n<AX/>\n<AX>\n<B>{.}</B>\n</AX>\n</A>');
+  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>|Y|</code></td></tr><tr><td><code>??/</code></td><td><code>#\\#</code></td></tr><tr><td><code>??\'</code></td><td><code>^</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia
+  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia, skipping one requires two new rows, since the first row matches the header
+  ta('<x>foobar 123|456|7890 |abc|defghij xyz</x>', '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "foobar 1234567890 (.*)defghij xyz", 1)</t:s></X>');
   
 }
 
