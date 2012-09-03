@@ -1648,7 +1648,9 @@ function serializeTemplateAsXPath(templates, full) {
           if (to.indexOf(lup[i]) >= 0 || to.indexOf(ldown[i]) >= 0) letters += lup[i];
         return 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'") = "' +  to.replace( /"/g, '""' ).toLowerCase() + '"';
       }      
-      var sel = t.value;
+      var sel;
+      if (!full) sel = t.value;
+      else sel = "*["+cmp("node-name(.)", t.value)+"]";
       for (var a in t.attributes)
         if (a != "class") 
           sel = sel + "[" + cmp("@" + a, t.attributes[a]) + "]";
