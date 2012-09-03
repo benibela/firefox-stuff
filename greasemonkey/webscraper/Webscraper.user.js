@@ -1636,18 +1636,24 @@ function serializeTemplateAsXPath(templates, full) {
   function rec(t) {
     if (t.kind != TemplateMatchNode && t.kind != TemplateLoop) 
       return; //ignore read and text for css
+    function cmp(xpath, to, startswith){
+      var toesc = '"' + to.replace( /"/g, '""' ) + '"';
+      if (!full) {
+        if (startswith) return 'starts-with('+xpath+', '+toesc+')';
+        else return xpath + ' = ' + toesc;
+      }
+      //translate(xpath, "ABC...", "abc", ...)
+      var lup   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      var ldown = "abcdefghijklmnopqrstuvwxyz";
+      var letters = "";
+      for (var i=0;i<26; i++)
+        if (to.indexOf(lup[i]) >= 0 || to.indexOf(ldown[i]) >= 0) letters += lup[i];
+      var translated = 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'")';
+      if (startswith) return 'starts-with('+translated + ', '+toesc+')';
+      else return translated + ' = ' + toesc;
+    }      
     function serializeNode(t){
       if (t.kind == TemplateLoop) return;  //ignore loop (everything is looped)
-      function cmp(xpath, to){
-        if (!full) return xpath + ' = "' + to.replace( /"/g, '""' ) + '"';
-        //translate(xpath, "ABC...", "abc", ...)
-        var lup   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        var ldown = "abcdefghijklmnopqrstuvwxyz";
-        var letters = "";
-        for (var i=0;i<26; i++)
-          if (to.indexOf(lup[i]) >= 0 || to.indexOf(ldown[i]) >= 0) letters += lup[i];
-        return 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'") = "' +  to.replace( /"/g, '""' ).toLowerCase() + '"';
-      }      
       var sel;
       if (!full) sel = t.value;
       else sel = "*["+cmp("node-name(.)", t.value)+"]";
@@ -1666,10 +1672,14 @@ function serializeTemplateAsXPath(templates, full) {
     var childsel = "";
     var first = true;
 
-    var resSel = [], resNames = [];
+    var resSel = [], resNames = []; var lastWasText = false;
     for (var i=0;i<t.children.length;i++) {
-      if (t.children[i].kind == TemplateMatchText) continue; //ignore
-      else if (t.children[i].kind == TemplateMatchNode) {
+      if (t.children[i].kind == TemplateMatchText) {
+        if (childsel != "") childsel += "/following-sibling::";
+        else childsel += "//";
+        childsel += "text()["+cmp(".", t.children[i].value, true)+"]";
+        lastWasText = true;
+      } else if (t.children[i].kind == TemplateMatchNode) {
         if (childsel != "") childsel += "/following-sibling::";
         else childsel += "//";
 
@@ -1681,14 +1691,15 @@ function serializeTemplateAsXPath(templates, full) {
           resNames.push(n[j]);
         }
         childsel += c[c.length-1];
+        lastWasText = false;
       } else if (t.children[i].kind == TemplateShortRead) {
         var read = /([^ ]*) *:= *(.*)/.exec(t.children[i].value);
         if (read == null) read = ["", t.children[i].value];
         resNames.push( read[0] );
         if (read[1] == ".") resSel.push(basesel);
         else if (childsel == "") resSel.push(basesel + childsel + "/" + read[1]);
-        else if (read[1] == "text()") resSel.push(basesel + childsel + "/following-sibling::text()");
-        else resSel.push(basesel + childsel + "/following-sibling::node()/" + read[1].replace( /text[(][)]/g, "."));
+        else if (read[1] == "text()") resSel.push(basesel + childsel + ( lastWasText ? "" : "/following-sibling::text()") );
+        else resSel.push(basesel + childsel + (lastWasText ? "/" : "/following-sibling::node()/") + read[1].replace( /text[(][)]/g, "."));
       }
     }
     if (childsel == "") resSel.push(basesel);
