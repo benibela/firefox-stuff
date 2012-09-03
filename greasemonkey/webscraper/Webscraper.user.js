@@ -229,10 +229,16 @@ function makeinput(caption, id, value){
   if (GM_getValue(prf+id+"_saved")) overridenValue = GM_getValue(prf+id+"_saved");
   return '<tr><td>'+caption+':</td><td><input id="'+prf+id+'"'+(overridenValue?'value="'+overridenValue+'"':"")+'/></td><td><button onclick="document.getElementById(\''+prf+id+'\').value = \''+value+'\';">⟲</button></tr>'; 
 }
-function makeselect(caption, id, values, def){ 
+function makeselectraw(id, values, def, style){ 
   if (!def) def = 0;
   if (GM_getValue(prf+id+"_saved")) def = GM_getValue(prf+id+"_saved") * 1;
-  return '<tr><td>'+caption+':</td><td><select style="width:100%" id="'+prf+id+'">'+ values.map ( function(e, i) { return '<option value="'+i+'"'+(def == i ? " selected" : "")+'>'+e+'</option>'} ) + '</select></td></tr>'; }
+  return '<select style="'+style+'" id="'+prf+id+'">'+ values.map ( function(e, i) { return '<option value="'+i+'"'+(def == i ? " selected" : "")+'>'+e+'</option>'} ) + '</select>'; 
+}
+function makeselect(caption, id, values, def){ 
+  return '<tr><td>'+caption+':</td><td>'+makeselectraw(id,values,def,"width:100%")+'</td></tr>'; 
+}
+
+
 
 function activateScraper(){ 
   localStorage[prf+"_deactivated"] = "";
@@ -249,7 +255,7 @@ makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|hover|hig
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
-'<hr>Resulting template:' +
+'<hr>Final ' + makeselectraw("outputkind", ["template","xpath", "xpath (short)", "css"], 0, "width: auto")+ ":"+
 '</div>'
       )
       .append(
@@ -273,9 +279,6 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               });
           }
         }))
-       .append(" ")
-       .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: true, click: regenerateTemplateQueued}))
-       .append(" use linebreaks")
        .append($("<br/>"))
        .append($("<textarea/>", {
          id: prf+'template',
@@ -306,6 +309,16 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
            .append($("<textarea/>", {id: prf + "multipagetemplate"}))
        )
        ;
+       
+       $("table", gui)
+       .append($("<tr/>")
+         .append($("<td/>"))
+         .append($("<td/>")
+           .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: true, click: regenerateTemplateQueued}))
+           .append(" use linebreaks")
+         )
+       );
+       
     
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
@@ -1120,7 +1133,7 @@ function fitElementTemplate(tn, att, h){ //template node name, template attribut
   
   for (var a in att) 
     if (a != "class") {
-      if (att[a] != h.attributes[a].value) return false;
+      if (!h.attributes[a] || att[a] != h.attributes[a].value) return false;
     } else {
       var expectedClasses = att[a];
       if (expectedClasses.length == 0) continue;
@@ -1458,7 +1471,13 @@ function regenerateTemplate(){
   for (var i=0;i<res.template.length;i++) if (res.template[i].value == "BODY") res.template[i].attributes = {}; //don't need to check attributes on body
 
   
-  var finalRes = serializeTemplate(res.template);
+  var finalRes;
+  switch ($(prfid+"outputkind").val() * 1) {
+    case 0: finalRes = serializeTemplate(res.template); break;
+    case 1: finalRes = serializeTemplateAsXPath(res.template);  break;
+    case 2: finalRes = serializeTemplateAsXPath(res.template, true); break;
+    case 3: finalRes = serializeTemplateAsCSS(res.template); break;
+  }
   
   $(prfid + "template").val( finalRes );
   
@@ -1523,8 +1542,78 @@ function serializeTemplate(templates) {
   return res;
 }
 
+/*
+Conversion rules
+node[@att="xyz"]
+
+node.class
+
+<a><b></b></a>
+
+a b
+
+a x ~ y ~ b 
+
+<a><x/><y/><b>..</b></a>
+*/
+
+function serializeTemplateAsCSS(templates) {
+  function rec(t) {
+    if (t.kind != TemplateMatchNode && t.kind != TemplateLoop) 
+      return; //ignore read and text for css
+    function serializeNode(t){
+      if (t.kind == TemplateLoop) return;  //ignore loop (everything is looped)
+      var sel = t.value;
+      if (t.attributes["id"] != null)
+        sel += "#" + t.attributes["id"];
+      if (t.attributes["class"] != null)
+        for (var i = 0; i < t.attributes["class"].length; i++) 
+          sel = sel + "." + t.attributes["class"][i];
+
+      for (var a in t.attributes)
+        if (a != "class" && a != "id") 
+          sel = sel + "[" + a + "=\"" + t.attributes[a].replace(/"/g, '\\"') + "\"]";
+      return sel;
+    } 
+    
+    var basesel = serializeNode(t);
+    var childsel = "";
+    var first = true;
+
+    var resSel = [], resNames = [];
+    for (var i=0;i<t.children.length;i++) {
+      if (t.children[i].kind == TemplateMatchText) continue; //ignore
+      else if (t.children[i].kind == TemplateMatchNode) {
+        if (childsel != "") childsel += " ~";
+
+        var cn = rec(t.children[i]) ;         
+        var c = cn[0], n = cn[1];
+        for (var j = 0; j<c.length;j++) {
+          resSel.push(basesel + childsel + " " + c[j]);  
+          resNames.push(n[j]);
+        }
+
+        childsel += " " + serializeNode(t.children[i]);            //ignore children for matching (can't nest css selectors)
+      } else if (t.children[i].kind == TemplateShortRead) {
+        resSel.push(basesel);
+        var names = /([^ ]*) *:=/.exec(t.children[i].value);
+        resNames.push( ( names && names.length > 1) ? names[1] : "");
+      }
+    }
+    return [resSel, resNames];
+  }
+  
+  var res = "";
+  for (var i = 0; i < templates.length; i++) {
+    var x = rec(templates[i]);
+    for (var j = 0; j < x[0].length; j++)
+       res += (x[1][j] != "" ? x[1][j] + " := " : "") + x[0][j] + "\n";
+  }
+  return res;
+}
 
 function UNIT_TESTS(){  // 👈🌍👉
+return;
   if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
 
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
