@@ -255,7 +255,7 @@ makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|hover|hig
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
 makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 1)+
 '</table>'+
-'<hr>Final ' + makeselectraw("outputkind", ["template","xpath", "xpath (short)", "css"], 0, "width: auto")+ ":"+
+'<hr>Final ' + makeselectraw("outputkind", ["template","xpath (case)", "xpath", "css"], 0, "width: auto")+ ":"+
 '</div>'
       )
       .append(
@@ -1474,8 +1474,8 @@ function regenerateTemplate(){
   var finalRes;
   switch ($(prfid+"outputkind").val() * 1) {
     case 0: finalRes = serializeTemplate(res.template); break;
-    case 1: finalRes = serializeTemplateAsXPath(res.template);  break;
-    case 2: finalRes = serializeTemplateAsXPath(res.template, true); break;
+    case 1: finalRes = serializeTemplateAsXPath(res.template, true);  break;
+    case 2: finalRes = serializeTemplateAsXPath(res.template); break;
     case 3: finalRes = serializeTemplateAsCSS(res.template); break;
   }
   
@@ -1584,16 +1584,17 @@ function serializeTemplateAsCSS(templates) {
     for (var i=0;i<t.children.length;i++) {
       if (t.children[i].kind == TemplateMatchText) continue; //ignore
       else if (t.children[i].kind == TemplateMatchNode) {
-        if (childsel != "") childsel += " ~";
+        if (childsel != "") childsel += " ~ ";
+        else childsel += " ";
 
         var cn = rec(t.children[i]) ;         
         var c = cn[0], n = cn[1];
         for (var j = 0; j<c.length;j++) {
-          resSel.push(basesel + childsel + " " + c[j]);  
+          resSel.push(basesel + childsel +  c[j]);  
           resNames.push(n[j]);
         }
 
-        childsel += " " + serializeNode(t.children[i]);            //ignore children for matching (can't nest css selectors)
+        childsel += serializeNode(t.children[i]);            //ignore children for matching (can't nest css selectors)
       } else if (t.children[i].kind == TemplateShortRead) {
         resSel.push(basesel);
         var names = /([^ ]*) *:=/.exec(t.children[i].value);
@@ -1612,6 +1613,96 @@ function serializeTemplateAsCSS(templates) {
   return res;
 }
 
+/*
+  Basic conversion rules:
+<node att="xyz">
+
+node[@att="xyz"][1]
+
+node[translate(@att, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "xyz"][1]
+
+<a><b></b></a>
+
+ //a//b
+
+
+<a><x/><y/><b>..</b></a>
+
+//a//x/following-sibling::y/following-sibling::b/
+
+  
+*/
+function serializeTemplateAsXPath(templates, full) {
+  function rec(t) {
+    if (t.kind != TemplateMatchNode && t.kind != TemplateLoop) 
+      return; //ignore read and text for css
+    function serializeNode(t){
+      if (t.kind == TemplateLoop) return;  //ignore loop (everything is looped)
+      function cmp(xpath, to){
+        if (!full) return xpath + ' = "' + to.replace( /"/g, '""' ) + '"';
+        //translate(xpath, "ABC...", "abc", ...)
+        var lup   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var ldown = "abcdefghijklmnopqrstuvwxyz";
+        var letters = "";
+        for (var i=0;i<26; i++)
+          if (to.indexOf(lup[i]) >= 0 || to.indexOf(ldown[i]) >= 0) letters += lup[i];
+        return 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'") = "' +  to.replace( /"/g, '""' ).toLowerCase() + '"';
+      }      
+      var sel = t.value;
+      for (var a in t.attributes)
+        if (a != "class") 
+          sel = sel + "[" + cmp("@" + a, t.attributes[a]) + "]";
+
+      if (t.attributes["class"] != null)
+        for (var i = 0; i < t.attributes["class"].length; i++) 
+          sel = sel + "[" + cmp('tokenize(@class, " ")', t.attributes["class"][i]) + "]";
+
+      return sel;
+    } 
+    
+    var basesel = serializeNode(t);
+    var childsel = "";
+    var first = true;
+
+    var resSel = [], resNames = [];
+    for (var i=0;i<t.children.length;i++) {
+      if (t.children[i].kind == TemplateMatchText) continue; //ignore
+      else if (t.children[i].kind == TemplateMatchNode) {
+        if (childsel != "") childsel += "/following-sibling::";
+        else childsel += "//";
+
+        var cn = rec(t.children[i]) ;         
+        var c = cn[0], n = cn[1];
+        for (var j = 0; j<c.length - 1;j++) {
+
+          resSel.push(basesel + childsel + c[j]);  
+          resNames.push(n[j]);
+        }
+        childsel += c[c.length-1];
+      } else if (t.children[i].kind == TemplateShortRead) {
+        var read = /([^ ]*) *:= *(.*)/.exec(t.children[i].value);
+        if (read == null) read = ["", t.children[i].value];
+        resNames.push( read[0] );
+        if (read[1] == ".") resSel.push(basesel);
+        else if (childsel == "") resSel.push(basesel + childsel + "/" + read[1]);
+        else if (read[1] == "text()") resSel.push(basesel + childsel + "/following-sibling::text()");
+        else resSel.push(basesel + childsel + "/following-sibling::node()/" + read[1].replace( /text[(][)]/g, "."));
+      }
+    }
+    if (childsel == "") resSel.push(basesel);
+    else resSel.push(basesel + "[." + childsel + "]");
+    resNames.push(":=");
+    return [resSel, resNames];
+  }
+  
+  var res = "";
+  for (var i = 0; i < templates.length; i++) {
+    var x = rec(templates[i]);
+    for (var j = 0; j < x[0].length - 1; j++)
+       res += (x[1][j] != "" ? x[1][j] + " := " : "") + "//" + x[0][j] + "\n";
+  }
+  return res;
+}
 function UNIT_TESTS(){  // 👈🌍👉
 return;
   if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
