@@ -1583,18 +1583,23 @@ function serializeTemplateAsCSS(templates) {
     var resSel = [], resNames = [];
     for (var i=0;i<t.children.length;i++) {
       if (t.children[i].kind == TemplateMatchText) continue; //ignore
-      else if (t.children[i].kind == TemplateMatchNode) {
+      else if (t.children[i].kind == TemplateMatchNode || t.children[i].kind == TemplateLoop) {
+        var kid = t.children[i];
+        if (kid.kind == TemplateLoop) { //todo: handle multiple children
+          if (kid.children.length == 0) continue;
+          kid = kid.children[0];
+        }
         if (childsel != "") childsel += " ~ ";
         else childsel += " ";
 
-        var cn = rec(t.children[i]) ;         
+        var cn = rec(kid) ;         
         var c = cn[0], n = cn[1];
         for (var j = 0; j<c.length;j++) {
           resSel.push(basesel + childsel +  c[j]);  
           resNames.push(n[j]);
         }
 
-        childsel += serializeNode(t.children[i]);            //ignore children for matching (can't nest css selectors)
+        childsel += serializeNode(kid);            //ignore children for matching (can't nest css selectors)
       } else if (t.children[i].kind == TemplateShortRead) {
         resSel.push(basesel);
         var names = /([^ ]*) *:=/.exec(t.children[i].value);
@@ -1679,11 +1684,16 @@ function serializeTemplateAsXPath(templates, full) {
         else childsel += "//";
         childsel += "text()["+cmp(".", t.children[i].value, true)+"]";
         lastWasText = true;
-      } else if (t.children[i].kind == TemplateMatchNode) {
+      } else if (t.children[i].kind == TemplateMatchNode || t.children[i].kind == TemplateLoop) {
+        var kid = t.children[i];
+        if (kid.kind == TemplateLoop) { //todo: handle multiple children
+          if (kid.children.length == 0) continue;
+          kid = kid.children[0]; //ignore loops (xpath is looping over all anyways)
+        }
         if (childsel != "") childsel += "/following-sibling::";
         else childsel += "//";
 
-        var cn = rec(t.children[i]) ;         
+        var cn = rec(kid) ;         
         var c = cn[0], n = cn[1];
         for (var j = 0; j<c.length - 1;j++) {
 
