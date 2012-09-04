@@ -264,7 +264,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
           click: function(){
             var fd = new FormData();
             fd.append("extract",$(prfid+"template").val());
-            fd.append("extract-kind", "template");
+            fd.append("extract-kind", (["template", "xpath", "xpath", "css"])[$(prfid+"outputkind").val()]);
             var clone = document.body.cloneNode(true);
             removeScraperNodes(clone);
             fd.append("data", "<html><head><title></title></head>"+ //prefix
