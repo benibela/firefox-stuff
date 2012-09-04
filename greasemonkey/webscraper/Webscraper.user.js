@@ -1461,7 +1461,7 @@ function regenerateTemplate(){
              || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0) {
                var x = nodeToTemplate(kids[j]);               
                if (x && x.kind != TemplateMatchText) toPushReverse.push(x);
-               else if (x && !hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
+               else if (x && !hasText && !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so they can't be used
                  hasText = true;
                  toPushReverse.push(x);
                }
