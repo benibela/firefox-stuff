@@ -263,8 +263,25 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
           text: "remote test",
           click: function(){
             var fd = new FormData();
-            fd.append("extract",$(prfid+"template").val());
-            fd.append("extract-kind", (["template", "xpath", "xpath", "css"])[$(prfid+"outputkind").val()]);
+            var extract = $(prfid+"template").val();
+            var extractKind = (["template", "xpath", "xpath", "css"])[$(prfid+"outputkind").val()];
+            if (extractKind == "css") {
+              extract = (extract + "\n").split("\n")[0];
+              var varCutOff = /.*:=(.*)/.exec(extract);
+              if (varCutOff) extract = varCutOff[1];
+            } else if (extractKind == "xpath") {
+              var s = extract.split("\n");
+              extract = "(";
+              for (var i=0;i<s.length;i++) {
+                if (s[i].trim() == "") continue;
+                if (extract.length != 1) extract += ",\n";
+                extract += s[i];
+              }
+              extract += ")";
+            }
+            alert(extract);
+            fd.append("extract", extract);
+            fd.append("extract-kind", extractKind);
             var clone = document.body.cloneNode(true);
             removeScraperNodes(clone);
             fd.append("data", "<html><head><title></title></head>"+ //prefix
