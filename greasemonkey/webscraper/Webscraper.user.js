@@ -1785,7 +1785,7 @@ function serializeTemplateAsXPath(templates, full) {
         var read = /([^ ]*) *:= *(.*)/.exec(t.children[i].value);
         if (read == null) read = ["", t.children[i].value];
         resNames.push( read[0] );
-        if (read[1] == ".") resSel.push(basesel);
+        if (read[1] == ".") resSel.push(basesel + (childsel != "" ? "[." + childsel + "]" : ""));
         else if (childsel == "") resSel.push(basesel + childsel + "/" + read[1]);
         else if (read[1] == "text()") resSel.push(basesel + childsel + ( lastWasText ? "" : "/following-sibling::text()") );
         else resSel.push(basesel + childsel + (lastWasText ? "/" : "/following-sibling::node()/") + read[1].replace( /text[(][)]/g, "."));
@@ -1971,7 +1971,7 @@ function UNIT_TESTS(){  // 👈🌍👉
     );
   t('<a><b>|hallo|</b></a>', 
     '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', 
-    '//A//B[text()[starts-with(., "hallo")]]',
+    '//A//B[.//text()[starts-with(., "hallo")]]',
     'A B',
     function(){$("."+prf+"templateRead ."+prf+"read_match_children").first().prop("checked", "checked");});
   t('<a><b>|123<x/>456|</b></a>', 
@@ -1981,7 +1981,7 @@ function UNIT_TESTS(){  // 👈🌍👉
      );   
   t('<a><b>|123<x/>456|</b></a>', 
     '<A>\n<B>123<X/>\n456<t:s>.</t:s></B>\n</A>', 
-    '//A//B[text()[starts-with(., "123")]/following-sibling::X/text()[starts-with(., "123")]]',
+    '//A//B[.//text()[starts-with(., "123")]/following-sibling::X/following-sibling::text()[starts-with(., "456")]]',
     'A B',
     function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); 
 //  t('<a><b>123<x/>456|foo<span>ood</span>bar|789<x/>012</b></a>', '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); not sure what this should become
@@ -2078,7 +2078,7 @@ if (!localStorage[prf+"_deactivated"]) {
   }
 
 
-  setTimeout(UNIT_TESTS, 50);
+//  setTimeout(UNIT_TESTS, 50);
 }
 
 if (GM_getValue("optionTableDisplay", "none") != "none") {
