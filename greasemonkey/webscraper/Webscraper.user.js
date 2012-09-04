@@ -279,7 +279,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               }
               extract += ")";
             }
-            alert(extract);
+
             fd.append("extract", extract);
             fd.append("extract-kind", extractKind);
             var clone = document.body.cloneNode(true);
@@ -325,18 +325,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
            .append($("<br/>"))
            .append($("<textarea/>", {id: prf + "multipagetemplate"}))
        )
-       ;
-       
-       $("table", gui)
-       .append($("<tr/>")
-         .append($("<td/>"))
-         .append($("<td/>")
-           .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: true, click: regenerateTemplateQueued}))
-           .append(" use linebreaks")
-         )
-       );
-       
-    
+        
       mainInterface = $("<div/>",{
         style: "position: fixed;" +
                "top: 10px; " +
@@ -430,12 +419,25 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  prfid+'multipageframe iframe {position: absolute; top: 0; left: 0;  width: 99%; height: 99%}' +*/
 '</style>'));
       
-      $(gui).find("input").change(function(){
+      $(gui).find("input, select").change(function(){
         GM_setValue(this.id+"_saved", this.value);
         regenerateTemplateQueued();
       });
-      $(gui).find("select").change(regenerateTemplateQueued);
+
       $(gui).find("td button").click(regenerateTemplateQueued);
+      
+       $("table", gui)
+       .append($("<tr/>")
+         .append($("<td/>"))
+         .append($("<td/>")
+           .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: GM_getValue(prf+"useLineBreaks"+"_saved", true), click: function(){
+             GM_setValue(this.id + "_saved", this.checked);         
+             regenerateTemplateQueued();
+           }}))
+           .append(" use linebreaks")
+         )
+       );
+
       
       var mouseUpActivated = false;
       $(document).mouseup(function(e){
@@ -492,6 +494,7 @@ function deactivateScraper(){
 
 function toggleMultipageScraping(){
   if ($(prfid+"multipage").css("display") == "none") {
+    $(prfid+"outputkind").val(0);
     $(prfid+"multipageclearall").show();
     $(prfid+"multipage").css("display", "block");
     GM_setValue("multipageActive", true);
