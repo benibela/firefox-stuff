@@ -1411,6 +1411,7 @@ function regenerateTemplate(){
       var newTemplate = null;
       var templateSpecific = false;
       var matchChildren = false;
+      var foundReadNow = false;
       if (kids[i].classList && kids[i].classList.contains(prf+"templateRead")) {
         if (kids[i].classList.contains(prf+"templateReadRepetition")) 
           continue;
@@ -1436,7 +1437,7 @@ function regenerateTemplate(){
         allOptional = allOptional && optional;
         hasOptional = hasOptional || optional;
         optionals.push(optional);
-        foundRead = true;
+        foundReadNow = true;
         matchChildren = $("."+prf+"read_match_children", kids[i]).is(':checked');
       } else { 
         var x = regenerateTemplateRec(kids[i]); 
@@ -1477,11 +1478,12 @@ function regenerateTemplate(){
         fullSpecified = fullSpecified && templateSpecific;
         lastFoundTemplate = i;
         res.push(newTemplate);
+        if (foundReadNow) foundRead = foundReadNow;
       } else if (siblingsinclmode == 0) { //always
         var x = nodeToTemplate(kids[i]);
         if (x != null) {
           if (x.kind != TemplateMatchText) res.push([x]);
-          else if (!hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
+          else if (!hasText && !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
             hasText = true;
             res.push([x]);
           }
@@ -1804,13 +1806,12 @@ function serializeTemplateAsXPath(templates, full) {
   return res;
 }
 function UNIT_TESTS(){  // 👈🌍👉
-return;
   if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
 
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
   var testi = 0;
-  function t(input, output, special){
+  function t(input, outputtemplate, outputxpath, outputcss,  special){
     testBox.html(input);
     
     var rangepos = [];
@@ -1883,48 +1884,108 @@ return;
 
     if (special) special();
     
-    regenerateTemplate();
-    
-    if (output.indexOf('id="') < 0) 
-      output = '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n' + output + '\n</DIV>';
-    output += "\n";
-    
-    var got = $(prfid + "template").val();
-    
     testi += 1;
-    if (got != output) alert("Test: "+testi +"\nGot: "+got+"\n------------------\nExpected: "+output);
+
+    function test(type, output, prefix, suffix) {
+    
+      $(prfid+"outputkind").val(type);
+    
+      regenerateTemplate();
+    
+      if (outputtemplate.indexOf('id="') < 0) {
+        if (suffix != "") output = prefix + output + suffix;
+        else output = prefix + output.replace(/\n/g, "\n" + prefix);
+      }
+      output += "\n";
+    
+      var got = $(prfid + "template").val();
+    
+      if (got != output) alert("Test: "+testi + ":"+type+"\nGot:\n"+got+"\n------------------\nExpected:\n"+output);
+    }
+    
+    test(0, outputtemplate, '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n', '\n</DIV>');
+    test(2, outputxpath, '//DIV[@id = "XXX_YYY_ZZZ_TESTBOX"]', '');
+    test(3, outputcss, 'DIV#XXX_YYY_ZZZ_TESTBOX ', '');
   }
   
   var ta = t;
   //t = function(a,b){};
   
   
-  t('<a><b>|Dies wird Variable test|</b></a>', '<A>\n<B>{.}</B>\n</A>');
-  t('<a><b>|Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
-  t('<a>|<b>Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
-  t('<a><b>|Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
-  t('<a>|<b>Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>', '<A>\n<B>{.}</B>\n</A>');
-  t('<a><b>Nicht Test</b><b>Test:</b><b>|Dies wird erneut Variable test2|</b></a>', '<A>\n<B/>\n<B/>\n<B>{.}</B>\n</A>');
-  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz|</b><b v="!">5</b></a>', '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>');
-  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz</b>|<b v="!">5</b></a>', '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>');
+  t('<a><b>|Dies wird Variable test|</b></a>',                                      '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
+  t('<a><b>|Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>',   '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
+  t('<a>|<b>Dies wird erneut Variable test|</b><b>Nicht Test</b><b>Test</b></a>',   '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
+  t('<a><b>|Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>',   '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
+  t('<a>|<b>Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>',   '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
+  t('<a><b>Nicht Test</b><b>Test:</b><b>|Dies wird erneut Variable test2|</b></a>', '<A>\n<B/>\n<B/>\n<B>{.}</B>\n</A>',   '//A//B/following-sibling::B/following-sibling::B', 'A B ~ B ~ B');
+  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz|</b><b v="!">5</b></a>', 
+    '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>',
+    '//A//B//text()[starts-with(., "Hier")]/filter(., "Hier(.*)", 1)',
+    'A B');
+  t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz</b>|<b v="!">5</b></a>', 
+    '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>',
+    '//A//B//text()[starts-with(., "Hier")]/filter(., "Hier(.*)", 1)',
+    'A B');
 
-  t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>');
-  t('<a>|<b>abc</b><c>dies kommt raus</c>|</a>', '<A>{.}</A>');
+  t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>', '//A//B\n//A//B/following-sibling::C', 'A B\nA B ~ C');
+  t('<a>|<b>abc</b><c>dies kommt raus</c>|</a>',   '<A>{.}</A>',                        '//A',                                 'A');
 
-  t('<a><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
-  t('<a><b>0</b><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', '<A>\n<B/>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>');
-  t('<a><ax>123124</ax><ax><b>525324</b></ax><ax><b>1</b></ax><ax><b>|3|</b></ax></a>', '<A>\n<AX/>\n<AX/>\n<AX/>\n<AX>\n<B>{.}</B>\n</AX>\n</A>');
-  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>|Y|</code></td></tr><tr><td><code>??/</code></td><td><code>#\\#</code></td></tr><tr><td><code>??\'</code></td><td><code>^</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia
-  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>'); //table modified from wikipedia, skipping one requires two new rows, since the first row matches the header
-  t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "7890 (.*)defghij xyz", 1)</t:s></X>');
-  t('<a><b>|1|</b><c>|2|</c></a>', '<A>\n<B t:optional="true">{.}</B>\n<C>{.}</C>\n</A>', function(){$("."+prf+"templateRead ."+prf+"read_optional").first().prop("checked", "checked");});
-  t('<a><b id="test">|xyz|</b></a>', '<B id="test">{.}</B>');
-  t('<a><b id="test">|xyz|</b><c>|abc|</c></a>', '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n<A>\n<B id="test">{.}</B>\n<C>{.}</C>\n</A>\n</DIV>');
-  t('<a><b>|hallo|</b></a>', '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead ."+prf+"read_match_children").first().prop("checked", "checked");});
-  t('<a><b>|123<x/>456|</b></a>', '<A>\n<B>{.}</B>\n</A>');   
-  t('<a><b>|123<x/>456|</b></a>', '<A>\n<B>123<X/>\n456<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); 
+  t('<a><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', 
+    '<A>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>',
+    '//A//B',
+    'A B');
+  t('<a><b>0</b><b>|1|</b><b>#2#</b><b>3</b><b>4</b><b>5</b></a>', 
+    '<A>\n<B/>\n<t:loop>\n<B>{.}</B>\n</t:loop>\n</A>',
+    '//A//B/following-sibling::B',
+    'A B ~ B');
+  t('<a><ax>123124</ax><ax><b>525324</b></ax><ax><b>1</b></ax><ax><b>|3|</b></ax></a>', 
+    '<A>\n<AX/>\n<AX/>\n<AX/>\n<AX>\n<B>{.}</B>\n</AX>\n</A>',
+    '//A//AX/following-sibling::AX/following-sibling::AX/following-sibling::AX//B',
+    'A AX ~ AX ~ AX ~ AX B');
+  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>|Y|</code></td></tr><tr><td><code>??/</code></td><td><code>#\\#</code></td></tr><tr><td><code>??\'</code></td><td><code>^</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', //table modified from wikipedia
+  '<TABLE class="prettytable">\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>',
+  '//TABLE[tokenize(@class, " ") = "prettytable"]//TR//TD/following-sibling::TD//CODE',
+  'TABLE.prettytable TR TD ~ TD CODE'); 
+  t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', //table modified from wikipedia
+  '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>',
+  '//TABLE[tokenize(@class, " ") = "prettytable"]//TR/following-sibling::TR/following-sibling::TR//TD/following-sibling::TD//CODE',
+  'TABLE.prettytable TR ~ TR ~ TR TD ~ TD CODE'
+  );  //skipping one requires two new rows, since the first row matches the header
+  t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', 
+    '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "7890 (.*)defghij xyz", 1)</t:s></X>',
+    '//X//text()[starts-with(., "foobar 123")]/filter(., "foobar 123(.*)7890 abcdefghij xyz", 1)\n//X//text()[starts-with(., "foobar 123")]/filter(., "7890 (.*)defghij xyz", 1)',
+    'X\nX');
+  t('<a><b>|1|</b><c>|2|</c></a>', 
+    '<A>\n<B t:optional="true">{.}</B>\n<C>{.}</C>\n</A>', 
+    '//A//B\n//A//B/following-sibling::C',
+    'A B\nA B ~ C',
+    function(){$("."+prf+"templateRead ."+prf+"read_optional").first().prop("checked", "checked");});
+  t('<a><b id="test">|xyz|</b></a>', 
+    '<B id="test">{.}</B>',
+    '//B[@id = "test"]',
+    'B#test');
+  t('<a><b id="test">|xyz|</b><c>|abc|</c></a>', 
+    '<DIV id="XXX_YYY_ZZZ_TESTBOX">\n<A>\n<B id="test">{.}</B>\n<C>{.}</C>\n</A>\n</DIV>',
+    '//DIV[@id = "XXX_YYY_ZZZ_TESTBOX"]//A//B[@id = "test"]\n//DIV[@id = "XXX_YYY_ZZZ_TESTBOX"]//A//B[@id = "test"]/following-sibling::C',
+    'DIV#XXX_YYY_ZZZ_TESTBOX A B#test\nDIV#XXX_YYY_ZZZ_TESTBOX A B#test ~ C'
+    );
+  t('<a><b>|hallo|</b></a>', 
+    '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', 
+    '//A//B[text()[starts-with(., "hallo")]]',
+    'A B',
+    function(){$("."+prf+"templateRead ."+prf+"read_match_children").first().prop("checked", "checked");});
+  t('<a><b>|123<x/>456|</b></a>', 
+     '<A>\n<B>{.}</B>\n</A>',
+     '//A//B',
+     'A B'
+     );   
+  t('<a><b>|123<x/>456|</b></a>', 
+    '<A>\n<B>123<X/>\n456<t:s>.</t:s></B>\n</A>', 
+    '//A//B[text()[starts-with(., "123")]/following-sibling::X/text()[starts-with(., "123")]]',
+    'A B',
+    function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); 
 //  t('<a><b>123<x/>456|foo<span>ood</span>bar|789<x/>012</b></a>', '<A>\n<B>hallo<t:s>.</t:s></B>\n</A>', function(){$("."+prf+"templateRead  ."+prf+"read_match_children").first().prop("checked", "checked");}); not sure what this should become
-    
+    //*/
   $(prfid+"gui").css("background-color","#00FF00");
   
 }
