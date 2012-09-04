@@ -1383,8 +1383,8 @@ function regenerateTemplate(){
              || (toPushReverse.length > 0 && findTemplateMatchingNodes(toPushReverse[toPushReverse.length-1], kids[j]).length > 0)
              || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0) {
                var x = nodeToTemplate(kids[j]);               
-               if (x.kind != TemplateMatchText) toPushReverse.push(x);
-               else if (!hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
+               if (x && x.kind != TemplateMatchText) toPushReverse.push(x);
+               else if (x && !hasText || !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so the template can only inlclude the first text node 
                  hasText = true;
                  toPushReverse.push(x);
                }
