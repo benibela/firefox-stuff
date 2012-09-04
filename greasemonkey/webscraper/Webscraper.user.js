@@ -573,7 +573,16 @@ function toggleMultipageScraping(){
       }
       var curUrl = location.href;
       if (curUrl.indexOf("#") > 0) curUrl = curUrl.substring(0, curUrl.indexOf("#"));
-      oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: ""});
+      var oldData = "";
+      
+      if (GM_getValue("FORM_URL", "") != "" || GM_getValue("FORM_DATA", "") != "") {
+        if (GM_getValue("FORM_URL") != "") curUrl = GM_getValue("FORM_URL");
+        if (GM_getValue("FORM_DATA") != "") oldData = GM_getValue("FORM_DATA");
+        GM_setValue("FORM_URL", "");
+        GM_setValue("FORM_DATA", "");
+      }
+
+      oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: oldData});
       while (oldMultipage.length >= 2 &&
              oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url &&
              (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
@@ -584,6 +593,54 @@ function toggleMultipageScraping(){
 
       multipageInitialized = true;
       regenerateMultipageTemplate();
+      
+      
+      
+      $("form").submit(function(){
+        if (!GM_getValue("multipageActive", false)) return;
+        function getParams(form) { //taken from some forum post
+          var esc = encodeURIComponent;
+              var params = [];
+              for (i=0; i<form.elements.length; i++){
+              var e = form.elements[i];
+              var n = e.getAttribute('name');
+              if (!n) continue;
+              if (e.tagName == "INPUT"){
+              switch (e.getAttribute('type').toLowerCase()){
+              case "text": case "hidden": case "password":
+              params.push(n + "=" + esc(e.value));
+              break;
+              case "checkbox":
+              if (e.checked) { params.push(n + "=" + esc(e.value)); }
+              //else { params.push(n + "="); } failed with stbdue
+              break;
+              case "radio":
+              if (e.checked) { params.push(n + "=" + esc(e.value)); }
+              break;
+              }
+              }
+              if (e.tagName == "TEXTAREA"){
+              params.push(n + "=" + esc(e.value));
+              }
+              if (e.tagName == "SELECT"){
+              params.push(n + "=" + esc(e.options[e.selectedIndex].value));
+              }
+              }
+              return params.join('&');
+        }      
+        
+        var url = this.action;
+        if (url == "") url = location.href;
+        var data = getParams(this);
+        if (this.method == "GET") {
+          if (url.indexOf("?") > 0) url += "&";
+          else url += "?";
+          url += data;
+          data = "";
+        }
+        GM_setValue("FORM_URL", url);
+        GM_setValue("FORM_DATA", data);
+      });
     }
     
   } else {
