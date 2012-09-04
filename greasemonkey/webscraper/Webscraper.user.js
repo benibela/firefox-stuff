@@ -689,7 +689,7 @@ function regenerateMultipageTemplate(){
     })+'>\n';
     if (pages[i].post != "") 
       res += "    <post>"+encodeXMLAttribute(pages[i].post)+"</post>\n";
-    if (pages[i].template != "") {
+    if (pages[i].template != "" && pages[i].template.trim() != "waiting for selection...") {
       res += "    <template>\n" + pages[i].template + "\n    </template>\n";
     }
     res += "  </page>\n";
