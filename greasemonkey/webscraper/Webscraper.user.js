@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Webscraper
+// @name        Webscraper / Xidelscript
 // @namespace   http://www.benibela.de
 // @include     *
 // @version     1
