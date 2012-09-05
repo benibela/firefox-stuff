@@ -428,7 +428,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       
        $("table", gui)
        .append($("<tr/>")
-         .append($("<td/>"))
+         .append($("<td/>").append($("<button/>", {text: "add selection", click: addSelectionToTemplate})))
          .append($("<td/>")
            .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: GM_getValue(prf+"useLineBreaks"+"_saved", true), click: function(){
              GM_setValue(this.id + "_saved", this.checked);         
@@ -442,13 +442,15 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       var mouseUpActivated = false;
       $(document).mouseup(function(e){
         if (mouseUpActivated) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
         mouseUpActivated = true;
         setTimeout(function(){
           mouseUpActivated = false;
           addSelectionToTemplate();
         }, 350);
       });
-      
+
       $(prfid+"optioncheckbox").click(function(){
         $(prfid+"optiontable").toggle(); 
         GM_setValue("optionTableDisplay", $(prfid+"optiontable").css("display"));
