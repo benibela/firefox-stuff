@@ -996,8 +996,8 @@ function addSelectionToTemplate(){
       var prefix = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE) ? "" : (kids[i-1].nodeValue.trimLeft());
       var suffix = (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE) ? "" : (kids[i+1].nodeValue).trimRight();
       value = "text()";
-      if (suffix != "") value = "substring-after(" + value +  ", '" + prefix + "')";
-      if (prefix != "") value = "substring-before(" + value +  ", '" + suffix + "')";
+      if (prefix != "") value = "substring-after(" + value +  ", '" + prefix + "')";
+      if (suffix != "") value = "substring-before(" + value +  ", '" + suffix + "')";
     } else {
       value = ".";
     }   
@@ -1811,7 +1811,7 @@ function serializeTemplateAsXPath(templates, full) {
 }
 function UNIT_TESTS(){  // 👈🌍👉
   if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
-
+  $(prfid+"useLineBreaks").prop("checked", "checked");
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
   var testi = 0;
@@ -1923,12 +1923,12 @@ function UNIT_TESTS(){  // 👈🌍👉
   t('<a>|<b>Dies wird erneut Variable test</b>|<b>Nicht Test</b><b>Test</b></a>',   '<A>\n<B>{.}</B>\n</A>',               '//A//B', 'A B');
   t('<a><b>Nicht Test</b><b>Test:</b><b>|Dies wird erneut Variable test2|</b></a>', '<A>\n<B/>\n<B/>\n<B>{.}</B>\n</A>',   '//A//B/following-sibling::B/following-sibling::B', 'A B ~ B ~ B');
   t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz|</b><b v="!">5</b></a>', 
-    '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>',
-    '//A//B//text()[starts-with(., "Hier")]/filter(., "Hier(.*)", 1)',
+    '<A>\n<B>Hier<t:s>substring-after(text(), \'Hier\')</t:s></B>\n</A>',
+    '//A//B//text()[starts-with(., "Hier")]/substring-after(., \'Hier\')',
     'A B');
   t('<a><b v="abc">1</b><b v="def"></b>      <b>2</b><b>3</b><b v="ok">Hier|xyz</b>|<b v="!">5</b></a>', 
-    '<A>\n<B>Hier<t:s>filter(text(), "Hier(.*)", 1)</t:s></B>\n</A>',
-    '//A//B//text()[starts-with(., "Hier")]/filter(., "Hier(.*)", 1)',
+    '<A>\n<B>Hier<t:s>substring-after(text(), \'Hier\')</t:s></B>\n</A>',
+    '//A//B//text()[starts-with(., "Hier")]/substring-after(., \'Hier\')',
     'A B');
 
   t('<a><b>|abc|</b><c>|dies kommt raus|</c></a>', '<A>\n<B>{.}</B>\n<C>{.}</C>\n</A>', '//A//B\n//A//B/following-sibling::C', 'A B\nA B ~ C');
@@ -1956,8 +1956,8 @@ function UNIT_TESTS(){  // 👈🌍👉
   'TABLE.prettytable TR ~ TR ~ TR TD ~ TD CODE'
   );  //skipping one requires two new rows, since the first row matches the header
   t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', 
-    '<X>foobar 123<t:s>filter(text(), "foobar 123(.*)7890 abcdefghij xyz", 1)</t:s><t:s>filter(text(), "7890 (.*)defghij xyz", 1)</t:s></X>',
-    '//X//text()[starts-with(., "foobar 123")]/filter(., "foobar 123(.*)7890 abcdefghij xyz", 1)\n//X//text()[starts-with(., "foobar 123")]/filter(., "7890 (.*)defghij xyz", 1)',
+    '<X>foobar 123<t:s>substring-before(substring-after(text(), \'foobar 123\'), \'7890 abcdefghij xyz\')</t:s><t:s>substring-before(substring-after(text(), \'7890 \'), \'defghij xyz\')</t:s></X>',
+    '//X//text()[starts-with(., "foobar 123")]/substring-before(substring-after(., \'foobar 123\'), \'7890 abcdefghij xyz\')\n//X//text()[starts-with(., "foobar 123")]/substring-before(substring-after(., \'7890 \'), \'defghij xyz\')',
     'X\nX');
   t('<a><b>|1|</b><c>|2|</c></a>', 
     '<A>\n<B t:optional="true">{.}</B>\n<C>{.}</C>\n</A>', 
@@ -2082,7 +2082,7 @@ if (!localStorage[prf+"_deactivated"]) {
   }
 
 
-//  setTimeout(UNIT_TESTS, 50);
+  setTimeout(UNIT_TESTS, 50);
 }
 
 if (GM_getValue("optionTableDisplay", "none") != "none") {
