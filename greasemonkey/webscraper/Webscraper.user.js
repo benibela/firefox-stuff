@@ -993,10 +993,11 @@ function addSelectionToTemplate(){
     else if (ignoreTag && cur.parentNode.childNodes.length == 1) value = ".";
     else if (kids[i].childNodes.length == 1 && kids[i].childNodes[0].nodeType == Node.TEXT_NODE) {
       //only read text
-      var prefix = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i-1].nodeValue.trimLeft());
-      var suffix = (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE) ? "" : RegExp.escape(kids[i+1].nodeValue).trimRight();
-      if (prefix == "" && suffix == "") value = "text()";
-      else value = "filter(text(), \""+prefix+"(.*)"+suffix+"\", 1)";
+      var prefix = (i == 0 || kids[i-1].nodeType != Node.TEXT_NODE) ? "" : (kids[i-1].nodeValue.trimLeft());
+      var suffix = (i == kids.length - 1 || kids[i+1].nodeType != Node.TEXT_NODE) ? "" : (kids[i+1].nodeValue).trimRight();
+      value = "text()";
+      if (suffix != "") value = "substring-after(" + value +  ", '" + prefix + "')";
+      if (prefix != "") value = "substring-before(" + value +  ", '" + suffix + "')";
     } else {
       value = ".";
     }   
