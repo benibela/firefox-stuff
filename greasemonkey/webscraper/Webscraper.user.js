@@ -1724,19 +1724,22 @@ function serializeTemplateAsXPath(templates, full) {
   function rec(t) {
     if (t.kind != TemplateMatchNode && t.kind != TemplateLoop) 
       return; //ignore read and text for css
-    function cmp(xpath, to, startswith){
-      var toesc = '"' + to.replace( /"/g, '""' ) + '"';
-      if (!full) {
-        if (startswith) return 'starts-with('+xpath+', '+toesc+')';
-        else return xpath + ' = ' + toesc;
-      }
+    function translate(xpath, to) {
       //translate(xpath, "ABC...", "abc", ...)
       var lup   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
       var ldown = "abcdefghijklmnopqrstuvwxyz";
       var letters = "";
       for (var i=0;i<26; i++)
         if (to.indexOf(lup[i]) >= 0 || to.indexOf(ldown[i]) >= 0) letters += lup[i];
-      var translated = 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'")';
+      return 'translate('+xpath+', "' + letters + '", "'+letters.toLowerCase()+'")';
+    }
+    function cmp(xpath, to, startswith){
+      var toesc = '"' + to.replace( /"/g, '""' ) + '"';
+      if (!full) {
+        if (startswith) return 'starts-with('+xpath+', '+toesc+')';
+        else return xpath + ' = ' + toesc;
+      }
+      var translated = translate(xpath, to);
       if (startswith) return 'starts-with('+translated + ', '+toesc+')';
       else return translated + ' = ' + toesc;
     }      
@@ -1751,7 +1754,7 @@ function serializeTemplateAsXPath(templates, full) {
 
       if (t.attributes["class"] != null)
         for (var i = 0; i < t.attributes["class"].length; i++) 
-          sel = sel + "[" + cmp('tokenize(@class, " ")', t.attributes["class"][i]) + "]";
+          sel = sel + "[contains(concat(' ', @class, ' '), ' " + t.attributes["class"][i].toLowerCase() + " ')]";
 
       return sel;
     } 
@@ -1948,11 +1951,11 @@ function UNIT_TESTS(){  // 👈🌍👉
     'A AX ~ AX ~ AX ~ AX B');
   t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>|Y|</code></td></tr><tr><td><code>??/</code></td><td><code>#\\#</code></td></tr><tr><td><code>??\'</code></td><td><code>^</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', //table modified from wikipedia
   '<TABLE class="prettytable">\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>',
-  '//TABLE[tokenize(@class, " ") = "prettytable"]//TR//TD/following-sibling::TD//CODE',
+  '//TABLE[contains(concat(\' \', @class, \' \'), \' prettytable \')]//TR//TD/following-sibling::TD//CODE',
   'TABLE.prettytable TR TD ~ TD CODE'); 
   t('<table class="prettytable"><tbody><tr class="hintergrundfarbe6"><th>Trigraph</th><th>ersetztes Zeichen</th></tr><tr><td><code>??=</code></td><td><code>Y</code></td></tr><tr><td><code>??/</code></td><td><code>|\\|</code></td></tr><tr><td><code>??\'</code></td><td><code>#^#</code></td></tr><tr><td><code>??(</code></td><td><code>[</code></td></tr><tr><td><code>??)</code></td><td><code>]</code></td></tr><tr><td><code>??!</code></td><td><code>X</code></td></tr><tr><td><code>??&lt;</code></td><td><code>{</code></td></tr><tr><td><code>??&gt;</code></td><td><code>}</code></td></tr><tr><td><code>??-</code></td><td><code>~</code></td></tr></tbody></table>', //table modified from wikipedia
   '<TABLE class="prettytable">\n<TR/>\n<TR/>\n<t:loop>\n<TR>\n<TD/>\n<TD>\n<CODE>{.}</CODE>\n</TD>\n</TR>\n</t:loop>\n</TABLE>',
-  '//TABLE[tokenize(@class, " ") = "prettytable"]//TR/following-sibling::TR/following-sibling::TR//TD/following-sibling::TD//CODE',
+  '//TABLE[contains(concat(\' \', @class, \' \'), \' prettytable \')]//TR/following-sibling::TR/following-sibling::TR//TD/following-sibling::TD//CODE',
   'TABLE.prettytable TR ~ TR ~ TR TD ~ TD CODE'
   );  //skipping one requires two new rows, since the first row matches the header
   t('<x>foobar 123|456|7890 |abc|defghij xyz</x>', 
