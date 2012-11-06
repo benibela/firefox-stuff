@@ -280,6 +280,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
               extract += ")";
             }
 
+            fd.append("raw", "true");
             fd.append("extract", extract);
             fd.append("extract-kind", extractKind);
             var clone = document.body.cloneNode(true);
