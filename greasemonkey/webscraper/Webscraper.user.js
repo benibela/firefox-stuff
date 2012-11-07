@@ -2085,7 +2085,7 @@ if (!localStorage[prf+"_deactivated"]) {
   }
 
 
-  setTimeout(UNIT_TESTS, 50);
+  //setTimeout(UNIT_TESTS, 50);
 }
 
 if (GM_getValue("optionTableDisplay", "none") != "none") {
