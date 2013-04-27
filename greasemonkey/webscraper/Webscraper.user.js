@@ -382,9 +382,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             
       $("head").append($(
 '<style>'+ 
- '.'+prf+ 'templateRead { border: 2px solid #FF00FF; display: inline-block}' +      //text-decoration: line-through;  
+ '.'+prf+ 'templateRead { border: 2px solid #FF00FF !important; display: inline-block}' +      //text-decoration: line-through;  
  '.'+prf+ 'templateRead div { border: none}' +      
- '.'+prf+ 'templateRead input { border: 1px solid gray}' +      
+ '.'+prf+ 'templateRead input { border: 1px solid gray; color: black; background-color: white}' +      
  '.'+prf+ 'templateRead button { border: 1px solid gray; margin-left: 4px}' +      
  '.'+prf+'read_options_hide {font-size:75%; border: 1px dashed; display: none; width: 100%; padding-right: 7px}'+
  '.'+prf+'templateRead:hover .'+prf+'read_options_hide{display: table}'+
@@ -396,7 +396,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+'read_source {width: 100%}'+
 
  '#'+prf+'main table {width: 100%}'+
- '#'+prf+'main input {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
+ '#'+prf+'main input {width: 100%; border: 1px solid gray; margin: 0; padding: 2px; color: black; background-color: white} '+
  '#'+prf+'main table button {border: 1px dashed black; padding: 2px;   cursor: pointer}'+
  '#'+prf+'main select {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
  '#'+prf+'main table td {padding:2px; margin: 0}'+
@@ -429,14 +429,25 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       
        $("table", gui)
        .append($("<tr/>")
-         .append($("<td/>").append($("<button/>", {text: "add selection", click: addSelectionToTemplate})))
          .append($("<td/>")
            .append($("<input>", {type: "checkbox", id: prf+"useLineBreaks", checked: GM_getValue(prf+"useLineBreaks"+"_saved", true), click: function(){
              GM_setValue(this.id + "_saved", this.checked);         
              regenerateTemplateQueued();
+             $(prfid+"useIndentationSpan").css("color", this.checked ? "black" : "gray");
            }}))
            .append(" use linebreaks")
          )
+         .append($("<td/>")
+           .append($("<span/>", {id: prf+"useIndentationSpan", style : "color: " + (GM_getValue(prf+"useLineBreaks"+"_saved", true) ? "black" : "gray")})
+             .append($("<input>", {type: "checkbox", id: prf+"useIndentation", checked: GM_getValue(prf+"useIndentation"+"_saved", true), click: function(){
+               GM_setValue(this.id + "_saved", this.checked);
+               regenerateTemplateQueued();
+             }}))
+             .append(" use indentation")
+           )
+         ))
+       .append($("<tr/>")
+         .append($("<td/>").append($("<button/>", {text: "add selection", click: addSelectionToTemplate})))
        );
 
       
@@ -1585,38 +1596,44 @@ function regenerateTemplate(){
     return res;
   }
   */
-function serializeTemplate(templates) {
+function serializeTemplate(templates, indentation) {
   var useLineBreaks = $(prfid + "useLineBreaks").is(":checked");
+  var useIndentation = useLineBreaks && $(prfid + "useIndentation").is(":checked");
   var lineBreak = useLineBreaks ? "\n" : "";
+  if (indentation == null) indentation = "";
+  var indentationDelta = (useIndentation ?  "  " : "");
 
   var res = "";
   function addSurrounded(s) {
     if (s == "") return;
-    if (useLineBreaks && s[s.length-1] == '\n') res += "\n";
+    var multiLine = s[s.length-1] == '\n';
+    if (useLineBreaks && multiLine) res += "\n";
     res += s;  
+    if (useIndentation && multiLine) res += indentation;
   }
   for (var i=0;i<templates.length;i++) {
     if (templates[i].kind == TemplateMatchNode) {
-      res += "<" + templates[i].value;
+      res += indentation + "<" + templates[i].value;
       if (objHasProperties(templates[i].attributes)) res += " " + encodeXMLAttributes(templates[i].attributes);
       if (templates[i].templateAttributes.optional) res += " t:optional=\"true\"";
       if (templates[i].children.length == 0) res += "/>" + lineBreak;
       else {
         res+=">";
-        addSurrounded(serializeTemplate(templates[i].children));
+        addSurrounded(serializeTemplate(templates[i].children, indentation + indentationDelta));
         res+="</"+templates[i].value+">" + lineBreak; 
       }
     } else if (templates[i].kind == TemplateMatchText) {
+      if (res.length > 0 && res[res.length-1] == '\n') res += indentation + indentationDelta;
       res += templates[i].value;
     } else if (templates[i].kind == TemplateLoop) {
-      res += "<t:loop>";
-      addSurrounded(serializeTemplate(templates[i].children));
+      res += indentation + "<t:loop>";
+      addSurrounded(serializeTemplate(templates[i].children, indentation + indentationDelta));
       res += "</t:loop>" + lineBreak;
     } else if (templates[i].kind == TemplateShortRead) {
       var shortNotation =  (i == 0 || (templates[i-1].kind != TemplateMatchText && templates[i-1].kind != TemplateShortRead))
                         && (i == templates.length-1 || (templates[i+1].kind != TemplateMatchText && templates[i+1].kind != TemplateShortRead));
       if (shortNotation) res += "{";
-      else res += "<t:s>";
+      else res += indentationDelta + "<t:s>";
       res += templates[i].value;
       if (shortNotation) res += "}";
       else res += "</t:s>";
@@ -1815,6 +1832,7 @@ function serializeTemplateAsXPath(templates, full) {
 function UNIT_TESTS(){  // 👈🌍👉
   if (!Node.ELEMENT_NODE) { alert("initialization failed"); return; }
   $(prfid+"useLineBreaks").prop("checked", "checked");
+  $(prfid+"useIndentation").prop("checked", "");
   var testBox = $("<div/>", {id: "XXX_YYY_ZZZ_TESTBOX"}); //can't use scraper prefix, or it would be ignored
   testBox.appendTo(document.body);
   var testi = 0;
