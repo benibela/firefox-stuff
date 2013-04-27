@@ -387,9 +387,9 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+ 'templateRead input { border: 1px solid gray; color: black; background-color: white}' +      
  '.'+prf+ 'templateRead button { border: 1px solid gray; margin-left: 4px}' +      
  '.'+prf+'read_options_hide {font-size:75%; border: 1px dashed; display: none; width: 100%; padding-right: 7px}'+
- '.'+prf+'templateRead:hover .'+prf+'read_options_hide{display: table}'+
+ //'.'+prf+'templateRead:hover .'+prf+'read_options_hide{display: table}'+
  '.'+prf+'templateRead .'+prf+'read_options_pre{display: inline; background-color: #FF00FF}'+ 
- '.'+prf+'templateRead:hover .'+prf+'read_options_pre{display: none}'+ 
+ //'.'+prf+'templateRead:hover .'+prf+'read_options_pre{display: none}'+ 
  '.'+prf+'read_options {display: inline}'+ 
 // '.'+prf+'read_options:hover {display: block}'+ 
  '.'+prf+'read_var {width: 40px}'+
@@ -1141,6 +1141,19 @@ function addSelectionToTemplate(){
            )
        )) 
     ).appendTo($("<div class='"+prf+"read_options'/>").appendTo($(templateRead)));
+    
+    
+    var v = false;
+    function changeVisibility(){
+      if (v) {
+        $(templateRead).find("."+prf+"read_options_pre").hide(0);
+        $(templateRead).find("."+prf+"read_options_hide").show(0);
+      } else {
+        $(templateRead).find("."+prf+"read_options_pre").show(0);
+        $(templateRead).find("."+prf+"read_options_hide").hide(0);
+      }
+    }
+    $(templateRead).hover(function(){v = true; changeVisibility()}, function(){v = false; setTimeout(changeVisibility, 250);});
   }
   
   if (window.searchingRepetition) 
