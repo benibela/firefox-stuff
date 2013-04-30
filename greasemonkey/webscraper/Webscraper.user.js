@@ -382,7 +382,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             
       $("head").append($(
 '<style>'+ 
- '.'+prf+ 'templateRead { border: 2px solid #FF00FF !important; display: inline-block}' +      //text-decoration: line-through;  
+ '.'+prf+ 'templateRead { border: 2px solid #FF00FF !important; display: inline-block; background-color: #FFFFFF; color: #000000}' +      //text-decoration: line-through;  
  '.'+prf+ 'templateRead div { border: none}' +      
  '.'+prf+ 'templateRead input { border: 1px solid gray; color: black; background-color: white}' +      
  '.'+prf+ 'templateRead button { border: 1px solid gray; margin-left: 4px}' +      
@@ -395,12 +395,13 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
  '.'+prf+'read_var {width: 40px}'+
  '.'+prf+'read_source {width: 100%}'+
 
+ '#'+prf+'main {background-color: #FFFFFF; color: #000000}'+
  '#'+prf+'main table {width: 100%}'+
  '#'+prf+'main input {width: 100%; border: 1px solid gray; margin: 0; padding: 2px; color: black; background-color: white} '+
  '#'+prf+'main table button {border: 1px dashed black; padding: 2px;   cursor: pointer}'+
  '#'+prf+'main select {width: 100%; border: 1px solid gray; margin: 0; padding: 2px;}'+
  '#'+prf+'main table td {padding:2px; margin: 0}'+
- '#'+prf+'main textarea {width: 20em; height:10em; resize: both; width: 100%}'+ 
+ '#'+prf+'main textarea {width: 20em; height:10em; resize: both; width: 100%; background-color: #FFFFFF; color: #000000}'+ 
 
 
  '.'+prf+ 'templateLoop { border: 2px solid #0000FF !important  ; }' +      
