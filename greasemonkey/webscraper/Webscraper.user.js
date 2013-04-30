@@ -2,7 +2,7 @@
 // @name        Webscraper / Xidelscript
 // @namespace   http://www.benibela.de
 // @include     *
-// @version     1
+// @version     3
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
 // ==/UserScript==
 
