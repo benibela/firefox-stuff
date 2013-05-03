@@ -2,7 +2,7 @@
 // @name        Webscraper / Xidelscript
 // @namespace   http://www.benibela.de
 // @include     *
-// @version     3
+// @version     4
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
 // ==/UserScript==
 
@@ -2104,6 +2104,7 @@ $("<div/>",{
          "right: 10px; top: 10px; " +
          "border: 2px solid red; " +
          "background-color: white; "+ 
+         "color: black; "+
          "cursor: pointer; padding: 2px; z-index: 2147483647",
   id: prf + "activation",
   click:  activateScraper
