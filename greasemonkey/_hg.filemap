@@ -3,6 +3,7 @@ exclude programs/internet/firefoxgreasemonkey/dreamworld
 exclude programs/internet/firefoxgreasemonkey/dreamworldwrap
 exclude programs/internet/firefoxgreasemonkey/tyrantbot
 rename programs/internet/firefoxgreasemonkey greasemonkey
+rename programs/internet/firefoxgreasemonkey/README.md README.md
 include programs/internet/firefoxthings
 rename programs/internet/firefoxthings plugin
 
