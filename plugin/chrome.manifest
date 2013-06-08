@@ -1,0 +1,8 @@
+content     bbfirefoxthings    chrome/content/
+content     bbfirefoxthings    chrome/content/ contentaccessible=yes
+overlay chrome://browser/content/browser.xul chrome://bbfirefoxthings/content/browser.xul
+
+locale	bbfirefoxthings	en-US	locale/en-US/
+
+skin	bbfirefoxthings	classic/1.0	skin/
+style	chrome://global/content/customizeToolbar.xul	chrome://bbfirefoxthings/skin/skin.css
