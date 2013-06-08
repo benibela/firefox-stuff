@@ -9,7 +9,7 @@ Greasemonkey scripts
 * daily_wtf_comment_reveal: shows the hidden comments on thedailywtf 
 * md5patch: patch for Greasemonkey to add a md5 function to it
 * skrupel: helper script for the German scifi browser game Skrupe
-
+* webscraper: the Xidelscript, script to create a webscraping template by selected stuff on a web page
 
 Plugin
 -------------

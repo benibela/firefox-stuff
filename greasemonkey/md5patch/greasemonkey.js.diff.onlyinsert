@@ -1,0 +1,3 @@
+GM_util.sha1(""); GM_util.md5(""); //to assure they are loaded, guess there is a better way to do it
+sandbox.GM_sha1 = GM_util.hitch(GM_util, 'sha1');
+sandbox.GM_md5 = GM_util.hitch(GM_util, 'md5');
