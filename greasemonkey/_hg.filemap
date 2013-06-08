@@ -1,0 +1,8 @@
+include programs/internet/firefoxgreasemonkey
+exclude programs/internet/firefoxgreasemonkey/dreamworld
+exclude programs/internet/firefoxgreasemonkey/dreamworldwrap
+exclude programs/internet/firefoxgreasemonkey/tyrantbot
+rename programs/internet/firefoxgreasemonkey greasemonkey
+include programs/internet/firefoxthings
+rename programs/internet/firefoxthings plugin
+
