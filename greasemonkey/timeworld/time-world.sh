@@ -3,6 +3,9 @@
 export PATH=$PATH::~/opt/xdotool
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/opt/xdotool
 
+SELF=/home/benito/timeworld/time-world.sh
+alias message=echo
+
 #WAR=1;
 #while getopts "w:" option
 #do
@@ -34,10 +37,14 @@ function mysleep(){
 
 while true; do
 
-WINDOW=` xdotool search --name "Play Time World"`
+WINDOW=` xdotool search --name "Play Time World" | tail -1`
 INIT=
 
+
 if [[ -z $WINDOW ]]; then
+  echo failed to find chrome
+  return;
+  
 #  firefox -P tyrant --no-remote -new-window http://www.kongregate.com/games/synapticon/tyrant 2> /dev/null  > /dev/nullc &
   sudo -u firefox google-chrome http://www.kongregate.com/games/playmage/time-world 2> /dev/null  > /dev/null &
   while [[ -z $WINDOW ]]; do 
@@ -66,34 +73,95 @@ fi
 OFFSETX=0
 OFFSETY=63
 
-case $1 in
-pirates)
 
+
+case $1 in
+
+autopirates)
+message select pirates
+#pretty alcon planet
+fastclick 529 364 #first or it hits the cancel button
+fastclick 470 233
+fastclick 318 304
+fastclick 712 302
+fastclick 163 352
+fastclick 361 419
+fastclick 661 407
+fastclick 621 552
+
+#home
+fastclick 252 211
+fastclick 418 189
+fastclick 717 235
+fastclick 198 378
+fastclick 368 391
+fastclick 500 297
+fastclick 667 392
+fastclick 588 518
+
+#pirate planet
+fastclick 261 183
+fastclick 433 257
+fastclick 610 210
+fastclick 289 298
+fastclick 682 311
+fastclick 259 483
+fastclick 465 439
+fastclick 621 465
+
+
+#strange planet
+fastclick 187 176
+fastclick 438 172
+fastclick 674 154
+fastclick 150 250 
+fastclick 340 347
+fastclick 632 375
+fastclick 525 458
+fastclick 231 458
+
+$SELF pirates
+;;
+
+pirates)
+message fight pirates
 myclick 432 357 # pirates battle
 myclick 683 133 # war of heros message
 myclick 683 133 # war of heros message
 myclick 106 450 # auto
-mysleep 90
+myclick 800 50 # close missinons dialog if no pirates are there
+mysleep 153
 myclick 800 125 # close result dialog
 
 ;;
 
 visit)
-
+message visit
 myclick 734 460 #friends
 myclick 500 $((172 + (RANDOM % 8) * 38)) #choose friend
-myclick 186 198 #planet
-myclick 256 185 #visit (offset 142 30)
+#myclick 186 198 #planet 1
+#myclick 256 185 #visit (offset 142 30)
+myclick 453 193 #planet 3
+myclick 555 186 #visit (offset 112 -7)
 myclick 493 375 #visit confirm
 fastclick 145 278 #chest left
 fastclick 44 258 #chest left
 fastclick 771 277 #chest right
 fastclick 803 277 #chest right
+fastclick 800 273 #chest right
 mysleep 1
 fastclick 507 362 #chest confirm
 fastclick 507 370 #chest confirm
 myclick 507 375 #chest confirm
 
+;;
+
+fullvisit)
+  if [ -z "$2" ]; then COUNT=1; else COUNT=$2; fi;
+  for ((i=1;i<=$COUNT;i++)); do 
+    $SELF visit
+    $SELF autopirates
+  done;
 ;;
 
 lab)
