@@ -43,7 +43,7 @@ INIT=
 
 if [[ -z $WINDOW ]]; then
   echo failed to find chrome
-  return;
+  exit;
   
 #  firefox -P tyrant --no-remote -new-window http://www.kongregate.com/games/synapticon/tyrant 2> /dev/null  > /dev/nullc &
   sudo -u firefox google-chrome http://www.kongregate.com/games/playmage/time-world 2> /dev/null  > /dev/null &
