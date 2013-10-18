@@ -126,25 +126,32 @@ $SELF pirates
 pirates)
 message fight pirates
 myclick 432 357 # pirates battle
+myclick 490 357 # pirates battle wtf
 myclick 683 133 # war of heros message
 myclick 683 133 # war of heros message
 myclick 106 450 # auto
 myclick 800 50 # close missinons dialog if no pirates are there
-mysleep 153
+myclick 878 50 # close missinons dialog if no pirates are there wtf
+mysleep $((RANDOM/300+60))
 myclick 800 125 # close result dialog
+myclick 858 125 # close result dialog wtf
 
 ;;
 
 visit)
 message visit
-myclick 734 460 #friends
-myclick 500 $((172 + (RANDOM % 8) * 38)) #choose friend
+#myclick 734 460 #friends
+myclick 867 460 #wtf shifted friends
+#myclick 500 $((172 + (RANDOM % 8) * 38)) #choose friend
+myclick 588 $((172 + (RANDOM % 8) * 38)) #wtf shifted choose friend
 #myclick 186 198 #planet 1
 #myclick 256 185 #visit (offset 142 30)
 myclick 453 193 #planet 3
 myclick 555 186 #visit (offset 112 -7)
-myclick 493 375 #visit confirm
+#myclick 493 375 #visit confirm
+myclick 567 375 #visit confirm wtf shifted
 fastclick 145 278 #chest left
+fastclick 60 278 #chest left
 fastclick 44 258 #chest left
 fastclick 771 277 #chest right
 fastclick 803 277 #chest right
@@ -152,6 +159,8 @@ fastclick 800 273 #chest right
 mysleep 1
 fastclick 507 362 #chest confirm
 fastclick 507 370 #chest confirm
+fastclick 563 370 #chest confirm wtf
+fastclick 563 375 #chest confirm wtf
 myclick 507 375 #chest confirm
 
 ;;
