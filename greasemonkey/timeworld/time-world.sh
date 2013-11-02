@@ -76,7 +76,7 @@ OFFSETY=63
 
 
 case $1 in
-
+fastautopirates) ;&
 autopirates)
 message select pirates
 #pretty alcon planet
@@ -120,19 +120,27 @@ fastclick 632 375
 fastclick 525 458
 fastclick 231 458
 
-$SELF pirates
+if [[ $1 = fastautopirates ]]; then  $SELF fastpirates; 
+else $SELF pirates; fi
 ;;
 
+fastpirates) ;&
 pirates)
 message fight pirates
 myclick 432 357 # pirates battle
 myclick 490 357 # pirates battle wtf
 myclick 683 133 # war of heros message
 myclick 683 133 # war of heros message
-myclick 106 450 # auto
+if [[ $1 = fastpirates ]]; then
+  myclick 20 450 # surrender
+  myclick 486 357 # confirm
+else myclick 106 450 # auto
+fi
 myclick 800 50 # close missinons dialog if no pirates are there
 myclick 878 50 # close missinons dialog if no pirates are there wtf
-mysleep $((RANDOM/300+60))
+if [[ $1 = fastpirates ]]; then mysleep 1
+else mysleep $((RANDOM/300+60))
+fi
 myclick 800 125 # close result dialog
 myclick 858 125 # close result dialog wtf
 
@@ -170,6 +178,14 @@ fullvisit)
   for ((i=1;i<=$COUNT;i++)); do 
     $SELF visit
     $SELF autopirates
+  done;
+;;
+
+fastfullvisit)
+  if [ -z "$2" ]; then COUNT=1; else COUNT=$2; fi;
+  for ((i=1;i<=$COUNT;i++)); do 
+    $SELF visit
+    $SELF fastautopirates
   done;
 ;;
 
