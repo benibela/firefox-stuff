@@ -152,10 +152,16 @@ message visit
 myclick 867 460 #wtf shifted friends
 #myclick 500 $((172 + (RANDOM % 8) * 38)) #choose friend
 myclick 588 $((172 + (RANDOM % 8) * 38)) #wtf shifted choose friend
+
 #myclick 186 198 #planet 1
 #myclick 256 185 #visit (offset 142 30)
+
+#myclick 311 262 #planet 2
+#myclick 400 256 #visit 
+
 myclick 453 193 #planet 3
 myclick 555 186 #visit (offset 112 -7)
+
 #myclick 493 375 #visit confirm
 myclick 567 375 #visit confirm wtf shifted
 fastclick 145 278 #chest left
