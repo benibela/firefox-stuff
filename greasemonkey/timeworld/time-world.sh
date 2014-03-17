@@ -139,7 +139,7 @@ fi
 myclick 800 50 # close missinons dialog if no pirates are there
 myclick 878 50 # close missinons dialog if no pirates are there wtf
 if [[ $1 = fastpirates ]]; then mysleep 1
-else mysleep $((RANDOM/300+60))
+else mysleep $((RANDOM/150+60))
 fi
 myclick 800 125 # close result dialog
 myclick 858 125 # close result dialog wtf
@@ -164,6 +164,7 @@ myclick 555 186 #visit (offset 112 -7)
 
 #myclick 493 375 #visit confirm
 myclick 567 375 #visit confirm wtf shifted
+mysleep 3 #slow loading
 fastclick 145 278 #chest left
 fastclick 60 278 #chest left
 fastclick 44 258 #chest left
