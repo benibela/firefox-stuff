@@ -684,6 +684,8 @@ function toggleMultipageScraping(){
             newA.innerHTML = as[i].innerHTML;
             as[i].style.display = "none";
             newA.href = "javascript:;"; //when changing here, update followLink
+            newA.className = as[i].className;
+            newA.setAttribute(prf + "interceptionInsertion", "true");
             newA.addEventListener("click", (function(oldA){return function(){
               if (!isMultipageScrapingEnabled()) {
                 oldA.click();
@@ -1557,6 +1559,7 @@ function regenerateTemplate(){
              || testTemplate.kind == TemplateLoop 
              || (toPushReverse.length > 0 && findTemplateMatchingNodes(toPushReverse[toPushReverse.length-1], kids[j]).length > 0)
              || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0) {
+               if (multipageInterceptionInitialized && kids[j].getAttribute(prf + "interceptionInsertion") == "true" ) continue; //ignore our own elements
                var x = nodeToTemplate(kids[j]);               
                if (x && x.kind != TemplateMatchText) toPushReverse.push(x);
                else if (x && !hasText && !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so they can't be used
