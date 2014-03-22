@@ -2,7 +2,7 @@
 // @name        Webscraper / Xidelscript
 // @namespace   http://www.benibela.de
 // @include     *
-// @version     4
+// @version     5
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -604,6 +604,8 @@ function toggleMultipageScraping(){
       var oldData = "";
       
       if (GM_getValue("FORM_URL", "") != "" || GM_getValue("FORM_DATA", "") != "") {
+        if (GM_getValue("FORM_URL") == "{$_follow}") GM_setValue(prf + "LAST_FOLLOW_URL", curUrl)
+        else GM_setValue(prf + "LAST_FOLLOW_URL", "");
         if (GM_getValue("FORM_URL") != "") curUrl = GM_getValue("FORM_URL");
         if (GM_getValue("FORM_DATA") != "") oldData = GM_getValue("FORM_DATA");
         GM_setValue("FORM_URL", "");
@@ -612,7 +614,9 @@ function toggleMultipageScraping(){
 
       oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: oldData});
       while (oldMultipage.length >= 2 &&
-             oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url &&
+             (  oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url ||
+                (oldMultipage[oldMultipage.length-2].url == "{$_follow}" && 
+                 oldMultipage[oldMultipage.length-1].url == GM_getValue(prf + "LAST_FOLLOW_URL")) ) &&
              (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
           oldMultipage.pop(); //remove useless duplicates caused by reloads
           
@@ -1089,7 +1093,7 @@ function addSelectionToTemplate(){
         var link = p.parent(); 
         if (multipageInitialized && link.attr("href") == "javascript:;") 
           link = link.next();
-        setTimeout(function(){ link[0].click(); }, 100);
+        setTimeout(function(){ GM_setValue("FORM_URL", "{$_follow}"); link[0].click(); }, 100);
       } else {
         p.find("."+prf+"read_var").val("_follow");
         p.find("."+prf+"read_source").val("@href");
