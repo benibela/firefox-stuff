@@ -604,7 +604,7 @@ function toggleMultipageScraping(){
       var oldData = "";
       
       if (GM_getValue("FORM_URL", "") != "" || GM_getValue("FORM_DATA", "") != "") {
-        if (GM_getValue("FORM_URL") == "{$_follow}") GM_setValue(prf + "LAST_FOLLOW_URL", curUrl)
+        if (GM_getValue("FORM_URL") == "{$follow}") GM_setValue(prf + "LAST_FOLLOW_URL", curUrl)
         else GM_setValue(prf + "LAST_FOLLOW_URL", "");
         if (GM_getValue("FORM_URL") != "") curUrl = GM_getValue("FORM_URL");
         if (GM_getValue("FORM_DATA") != "") oldData = GM_getValue("FORM_DATA");
@@ -613,11 +613,13 @@ function toggleMultipageScraping(){
       }
 
       oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: oldData});
-      while (oldMultipage.length >= 2 &&
-             (  oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url ||
-                (oldMultipage[oldMultipage.length-2].url == "{$_follow}" && 
-                 oldMultipage[oldMultipage.length-1].url == GM_getValue(prf + "LAST_FOLLOW_URL")) ) &&
-             (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
+      while (oldMultipage.length >= 2 
+            &&
+             ( (  oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url 
+                 && oldMultipage[oldMultipage.length-2].url != "{$follow}")
+               || (oldMultipage[oldMultipage.length-2].url == "{$follow}" 
+                   && oldMultipage[oldMultipage.length-1].url == GM_getValue(prf + "LAST_FOLLOW_URL")) ) 
+            && (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
           oldMultipage.pop(); //remove useless duplicates caused by reloads
           
       for (var i = 0; i < oldMultipage.length; i++) 
@@ -628,7 +630,72 @@ function toggleMultipageScraping(){
       
       if (!multipageInterceptionInitialized) {
         multipageInterceptionInitialized = true;
+        function getElementValue(e){
+          switch (e.tagName) {
+            case "INPUT": if (e.getAttribute('type')) switch (e.getAttribute('type').toLowerCase()){
+              case "text": case "hidden": case "password":
+                return e.value;
+              case "checkbox": case "radio":
+                return e.checked;
+              default: return "";
+            }
+            case "TEXTAREA": return e.value;
+            case "SELECT": return e.options[e.selectedIndex].value;
+            default: return "";
+          }
+        }
         //intercept form
+        var inps = [].concat(
+          [].slice.call(document.getElementsByTagName("input")),
+          [].slice.call(document.getElementsByTagName("textarea")),
+          [].slice.call(document.getElementsByTagName("select"))
+        );
+
+        for (var i=0;i<inps.length;i++) 
+          inps[i].setAttribute(prf+"oldValue", getElementValue(inps[i]));
+
+        $("form").submit(function(){
+          if (!GM_getValue("multipageActive", false)) return;
+          var an = []; var av = [];
+          for (var i=0; i<this.elements.length; i++){          
+            var e = this.elements[i];
+            var v = getElementValue(e);
+            if (!e.getAttribute('name')) continue;
+            if (e.getAttribute(prf + "oldValue") == v) continue;
+            if (e.tagName == "INPUT" 
+                && e.getAttribute('type') 
+                && (e.getAttribute('type').toLowerCase() == "radio" || e.getAttribute('type').toLowerCase() == "checkbox") 
+                && !e.checked)
+              continue;
+            an.push(e.getAttribute("name"));
+            av.push(v);
+          };
+          var ser = "";
+          if (an.length == 0) ser = ".";
+          else {
+            for (var i=0;i<an.length;i++) {
+              if (ser != '') ser += ', ';
+              ser += '"' + an[i].replace('"', '""', "g") + '": ' 
+                   + '"' + av[i].replace('"', '""', "g") + '"' ;
+            }
+            ser = 'form(., {' + ser + '})';
+          }
+
+          var tempElement = document.createTextNode("x");
+          if (this.childNodes.length == 0) this.appendChild(tempElement);
+          else this.insertBefore(tempElement, this.childNodes[0]);
+          var range = document.createRange();
+          range.setStartBefore(tempElement);
+          range.setEndAfter(tempElement);             
+          addRangeToTemplate(range);
+           
+          $(this).find(prfclass+"read_var").first().val("follow");
+          $(this).find(prfclass+"read_source").first().val(ser);
+          tempElement.textContent = "";
+          regenerateTemplate();
+          GM_setValue("FORM_URL", "{$follow}");
+        });
+        /*
         $("form").submit(function(){
           if (!GM_getValue("multipageActive", false)) return;
           function getParams(form) { //taken from some forum post
@@ -673,7 +740,7 @@ function toggleMultipageScraping(){
           }
           GM_setValue("FORM_URL", url);
           GM_setValue("FORM_DATA", data);
-        });
+        });*/
         
         
         //intercept links
@@ -891,6 +958,12 @@ function addSelectionToTemplate(){
   if ($(s.anchorNode).add(s.focusNode).parents("."+prf+"read_options").length != 0) return; 
 
   var r = s.getRangeAt(0);
+  addRangeToTemplate(r, s);
+}
+  
+function addRangeToTemplate(range, selection){
+  var r = range;
+  var s = selection;
   if (!r) return;
   
   var start = r.startContainer, end = r.endContainer, startOffset = r.startOffset, endOffset = r.endOffset;
@@ -908,9 +981,10 @@ function addSelectionToTemplate(){
     end = temp;
     changed = true;
   }
-  $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead").each(
-    function(i,n){removeNodeButKeepChildren(n); changed=true; }
-  );
+  if (s)
+    $(s.anchorNode).add(s.focusNode).parents("."+prf+"templateRead").each(
+      function(i,n){removeNodeButKeepChildren(n); changed=true; }
+    );
     
   
   if (start == end && endOffset <= startOffset) { if (changed) regenerateTemplateQueued(); return; }
@@ -1076,7 +1150,7 @@ function addSelectionToTemplate(){
     function varnameChanged(){
       var p = $(this).parents("."+prf+"templateRead");
       var value = p.find("."+prf+"read_var").val();
-      p.find(prfclass+"btnfollow").text( value.indexOf("_follow") >= 0 ? "follow link" : "mark link");
+      p.find(prfclass+"btnfollow").text( value.indexOf("follow") >= 0 ? "follow link" : "mark link");
             
       if (p.find("."+prf+"read_optional").is(':checked')) value += "?";
       p.find("."+prf+"read_options_pre").text(value);
@@ -1091,13 +1165,13 @@ function addSelectionToTemplate(){
       e.stopImmediatePropagation();
       e.preventDefault();
 
-      if (p.find("."+prf+"read_var").val().indexOf("_follow") >= 0) {
+      if (p.find("."+prf+"read_var").val().indexOf("follow") >= 0) {
         var link = p.parent(); 
         if (multipageInitialized && link.attr("href") == "javascript:;") 
           link = link.next();
-        setTimeout(function(){ GM_setValue("FORM_URL", "{$_follow}"); link[0].click(); }, 100);
+        setTimeout(function(){ GM_setValue("FORM_URL", "{$follow}"); link[0].click(); }, 100);
       } else {
-        p.find("."+prf+"read_var").val("_follow");
+        p.find("."+prf+"read_var").val(multipageInitialized ? "follow" : "_follow");
         p.find("."+prf+"read_source").val("@href");
         varnameChanged.call(this);        
         if (multipageInitialized && $(prfid + "multipageAutoFollow").is(':checked')) {
@@ -1263,7 +1337,8 @@ function addSelectionToTemplate(){
 //  if (templateRead.parentNode.parentNode) removeEmptyTextNodesChildNodes(templateRead.parentNode.parentNode);
   */
   regenerateTemplateQueued();
-  window.getSelection().collapseToStart();
+  if (selection)
+   window.getSelection().collapseToStart(); //or use selection? ?
 }
 
 function updateRegexps(){
@@ -1559,7 +1634,8 @@ function regenerateTemplate(){
              || testTemplate.kind == TemplateLoop 
              || (toPushReverse.length > 0 && findTemplateMatchingNodes(toPushReverse[toPushReverse.length-1], kids[j]).length > 0)
              || findTemplateMatchingNodes(testTemplate, kids[j]).length > 0) {
-               if (multipageInterceptionInitialized && kids[j].getAttribute(prf + "interceptionInsertion") == "true" ) continue; //ignore our own elements
+               if (multipageInterceptionInitialized && kids[j].getAttribute && kids[j].getAttribute(prf + "interceptionInsertion") == "true" ) 
+                 continue; //ignore our own elements
                var x = nodeToTemplate(kids[j]);               
                if (x && x.kind != TemplateMatchText) toPushReverse.push(x);
                else if (x && !hasText && !foundRead) { //multiple text nodes around a read mean that the text node has been splitted and the html contains only one text node here, so they can't be used
