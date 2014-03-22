@@ -4,6 +4,9 @@
 // @include     *
 // @version     4
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
+// @grant       GM_getValue
+// @grant       GM_setValue
+// @grant       GM_xmlhttpRequest
 // ==/UserScript==
 
 /***************************************************************************
@@ -188,8 +191,10 @@ function dragStop(event) {
 
 
 var prf = "__scraper_";
-var prfid = "#__scraper_";
+var prfid = "#" + prf;
+var prfclass = "." + prf;
 var multipageInitialized = false;
+var multipageInterceptionInitialized = false;
 var mainInterface = null;
 var changedBody = false;
 
@@ -479,6 +484,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 //alert(localStorage[prf+"guiposition"]);
       
       //  $( prfid + "moveleft").click(); works, but then causes an exception :(
+      
     } else mainInterface.show();
     $(prfid+"activation").hide();
 
@@ -505,10 +511,12 @@ function deactivateScraper(){
   }
 }
 
-
+function isMultipageScrapingEnabled(){
+  return !($(prfid+"multipage").css("display") == "none");
+}
 
 function toggleMultipageScraping(){
-  if ($(prfid+"multipage").css("display") == "none") {
+  if (!isMultipageScrapingEnabled()) {
     $(prfid+"outputkind").val(0);
     $(prfid+"multipageclearall").show();
     $(prfid+"multipage").css("display", "block");
@@ -522,9 +530,14 @@ function toggleMultipageScraping(){
       
       table.html("");
       
-      table.append($("<tr/>")
-          .append($("<td/>", {text: "Variables:"}))
-          .append($("<td/>", {colspan: 3}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))));
+      table
+      .append($("<tr/>")
+            .append($("<td/>", {text: "Auto-follow:"}))
+            .append($("<td/>").append($("<input/>", {type:"checkbox", checked: GM_getValue("multipageAutoFollow", true), id: prf + "multipageAutoFollow", title: "Automatically follow clicked links or submitted forms, no need to click the follow button", change: function(){ GM_setValue("multipageAutoFollow", $(prfid+"multipageAutoFollow").checked()); } }))))
+      .append($("<tr/>")
+            .append($("<td/>", {text: "Variables:"}))
+            .append($("<td/>", {colspan: 3}).append($("<input/>", {value: GM_getValue("multipageVariables", ""), id: prf + "multipageVariables", title: "Variables defined in the template, in the format a:=1, b:=2, c:=3.", change: regenerateMultipageTemplate}))))
+      ;
       
       function toggleNextTR(cb, count){
         if (!count) count = 1;
@@ -609,53 +622,88 @@ function toggleMultipageScraping(){
       multipageInitialized = true;
       regenerateMultipageTemplate();
       
-      
-      
-      $("form").submit(function(){
-        if (!GM_getValue("multipageActive", false)) return;
-        function getParams(form) { //taken from some forum post
-          var esc = encodeURIComponent;
-              var params = [];
-              for (i=0; i<form.elements.length; i++){
-              var e = form.elements[i];
-              var n = e.getAttribute('name');
-              if (!n) continue;
-              if (e.tagName == "INPUT"){
-              switch (e.getAttribute('type').toLowerCase()){
-              case "text": case "hidden": case "password":
-              params.push(n + "=" + esc(e.value));
-              break;
-              case "checkbox":
-              if (e.checked) { params.push(n + "=" + esc(e.value)); }
-              //else { params.push(n + "="); } failed with stbdue
-              break;
-              case "radio":
-              if (e.checked) { params.push(n + "=" + esc(e.value)); }
-              break;
-              }
-              }
-              if (e.tagName == "TEXTAREA"){
-              params.push(n + "=" + esc(e.value));
-              }
-              if (e.tagName == "SELECT"){
-              params.push(n + "=" + esc(e.options[e.selectedIndex].value));
-              }
-              }
-              return params.join('&');
-        }      
+      if (!multipageInterceptionInitialized) {
+        multipageInterceptionInitialized = true;
+        //intercept form
+        $("form").submit(function(){
+          if (!GM_getValue("multipageActive", false)) return;
+          function getParams(form) { //taken from some forum post
+            var esc = encodeURIComponent;
+                var params = [];
+                for (i=0; i<form.elements.length; i++){
+                var e = form.elements[i];
+                var n = e.getAttribute('name');
+                if (!n) continue;
+                if (e.tagName == "INPUT"){
+                switch (e.getAttribute('type').toLowerCase()){
+                case "text": case "hidden": case "password":
+                params.push(n + "=" + esc(e.value));
+                break;
+                case "checkbox":
+                if (e.checked) { params.push(n + "=" + esc(e.value)); }
+                //else { params.push(n + "="); } failed with stbdue
+                break;
+                case "radio":
+                if (e.checked) { params.push(n + "=" + esc(e.value)); }
+                break;
+                }
+                }
+                if (e.tagName == "TEXTAREA"){
+                params.push(n + "=" + esc(e.value));
+                }
+                if (e.tagName == "SELECT"){
+                params.push(n + "=" + esc(e.options[e.selectedIndex].value));
+                }
+                }
+                return params.join('&');
+          }      
+          
+          var url = this.action;
+          if (url == "") url = location.href;
+          var data = getParams(this);
+          if (this.method == "GET") {
+            if (url.indexOf("?") > 0) url += "&";
+            else url += "?";
+            url += data;
+            data = "";
+          }
+          GM_setValue("FORM_URL", url);
+          GM_setValue("FORM_DATA", data);
+        });
         
-        var url = this.action;
-        if (url == "") url = location.href;
-        var data = getParams(this);
-        if (this.method == "GET") {
-          if (url.indexOf("?") > 0) url += "&";
-          else url += "?";
-          url += data;
-          data = "";
-        }
-        GM_setValue("FORM_URL", url);
-        GM_setValue("FORM_DATA", data);
-      });
+        
+        //intercept links
+        setTimeout(function(){
+          var as = document.getElementsByTagName("a");
+          for (var i=as.length-1;i>=0;i--) {
+            var newA = document.createElement("a");
+            newA.innerHTML = as[i].innerHTML;
+            as[i].style.display = "none";
+            newA.href = "javascript:;"; //when changing here, update followLink
+            newA.addEventListener("click", (function(oldA){return function(){
+              if (!isMultipageScrapingEnabled()) {
+                oldA.click();
+                return;
+              }
+              //alert("clicked on:" + oldA.textContent);
+              var range = document.createRange();
+              range.setStartBefore( oldA.previousSibling);
+              range.setEndAfter(oldA.previousSibling);             
+              setTimeout(function(){
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);            
+                setTimeout(function(){
+  //                $(oldA.previousSibling).find(prfclass+"btnloop").hide();
+                  $(oldA.previousSibling).find(prfclass+"btnfollow").click();
+                }, 300);
+              }, 200);
+              return false;
+            }})(as[i]));
+            as[i].parentNode.insertBefore(newA, as[i]);
+            
+          }
+        }, 300);      
+      }
     }
     
   } else {
@@ -669,7 +717,7 @@ function toggleMultipageScraping(){
 function regenerateMultipageTemplate(){
   var pages = [];
   var tds = $(prfid+"multipagetable tr td");
-  for (var i=2; i < tds.length; i+=14) {
+  for (var i=4; i < tds.length; i+=14) {
     pages.push({
       url:      tds[i+ 1].getElementsByTagName("input")[0].value,
       post:     tds[i+ 4].getElementsByTagName("input")[0].value,
@@ -1022,19 +1070,35 @@ function addSelectionToTemplate(){
     function varnameChanged(){
       var p = $(this).parents("."+prf+"templateRead");
       var value = p.find("."+prf+"read_var").val();
+      p.find(prfclass+"btnfollow").text( value.indexOf("_follow") >= 0 ? "follow link" : "mark link");
+            
       if (p.find("."+prf+"read_optional").is(':checked')) value += "?";
       p.find("."+prf+"read_options_pre").text(value);
       regenerateTemplateQueued();
     }
     
     function followLink(e){
+      var t = this;
       var p = $(this).parents("."+prf+"templateRead");
-      p.find("."+prf+"read_optional").prop("checked", true);
-      p.find("."+prf+"read_var").val("_follow");
-      p.find("."+prf+"read_source").val("@href");
-      regenerateTemplateQueued();
+     // p.find("."+prf+"read_optional").prop("checked", true); ??
+     
       e.stopImmediatePropagation();
       e.preventDefault();
+
+      if (p.find("."+prf+"read_var").val().indexOf("_follow") >= 0) {
+        var link = p.parent(); 
+        if (multipageInitialized && link.attr("href") == "javascript:;") 
+          link = link.next();
+        setTimeout(function(){ link[0].click(); }, 100);
+      } else {
+        p.find("."+prf+"read_var").val("_follow");
+        p.find("."+prf+"read_source").val("@href");
+        varnameChanged.call(this);        
+        if (multipageInitialized && $(prfid + "multipageAutoFollow").is(':checked')) {
+          regenerateTemplate();
+          setTimeout(function(){t.click();}, 200); //after regen
+        } 
+      }
     }
     
     function readRepetitions(e,p){
@@ -1131,10 +1195,10 @@ function addSelectionToTemplate(){
                .append(spanner().text(":="))
                .append(spanner(maketinyedit(prf+"read_source", "Value to read (e.g. text() or   @href))").val(value).css("width", width)).css("width", width).css("padding-right", "10px"))
            ).add($("<div/>", {})
-             .append(maketinybutton(prf+"btnkill", "X", function(e){var readTag = this.parentNode.parentNode.parentNode.parentNode; removeNodeButKeepChildren(readTag); regenerateTemplateQueued(); e.preventDefault(); }))
+             .append(maketinybutton(prf+"btnkill", "X", function(e){var readTag = this.parentNode.parentNode.parentNode.parentNode; removeNodeButKeepChildren(readTag); regenerateTemplateQueued(); e.preventDefault(); return false;}))
             // .append("<br/>")
-             .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "follow link", followLink) : "")
-             .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead"));}))
+             .append(cur.nodeName == "A" ? maketinybutton(prf+"btnfollow", "mark link", followLink) : "")
+             .append(maketinybutton(prf+"btnloop", "read repetitions", function(e){readRepetitions(e,$(this).parents("."+prf+"templateRead")); return false;}))
              .append($("<input/>", {type: "checkbox", class: prf+"read_optional", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
              .append("optional")
              .append($("<input/>", {type: "checkbox", class: prf+"read_match_children", change: varnameChanged, click: function(e){ e.preventDefault(); var t = this; var tc = this.checked; setTimeout(function(){ t.checked = tc; varnameChanged.call(t); /* returning resets the checked value to the old value. */ }, 200); return false;}}))
