@@ -13,7 +13,7 @@
 // @name        Webscraper / Xidelscript
 
 /***************************************************************************
- *   copyright       : (C) 2012 Benito van der Zander                      *
+ *   copyright       : (C) 2012-2014 Benito van der Zander                 *
  *                              (except the library directly below)        *
  *   http://www.benibela.de                                                *
  *                                                                         *
@@ -826,9 +826,13 @@ function regenerateMultipageTemplate(){
 
   var vars = $(prfid+"multipageVariables").val();
   
-  
-  GM_setValue("multipageTemplate", JSON.stringify(pages));
-  GM_setValue("multipageVariables", vars);
+  if (!vars) {
+    pages = JSON.parse(GM_getValue("multipageTemplate", JSON.stringify(pages)));
+    vars = GM_getValue("multipageVariables", "");
+  } else {
+    GM_setValue("multipageTemplate", JSON.stringify(pages));
+    GM_setValue("multipageVariables", vars);
+  }
   
   var res = "<action>\n";
   if (vars != "") {
@@ -2271,7 +2275,7 @@ GUI:
 
 
 
-var inIframe = window.frameElement && window.frameElement.nodeName == "IFRAME";
+var inIframe = top != self && window.frameElement && window.frameElement.nodeName && window.frameElement.nodeName == "IFRAME";
 
 if (!inIframe) { //iframe screws up multipage templates
 
@@ -2294,7 +2298,86 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    var phase = GM_getValue("vl_phase", 0);
    if (phase >= 3 && phase < 3 + bookFields.length) phase = 3;
    var firstField = -1;
+   var firstFieldTemplateRead;
+   function vlfinished(){
+     var libName = GM_getValue("vl_libName", "meine Bibliothek");
+     regenerateMultipageTemplate();
+     mainInterface.hide();
+     lastpage = $("<div/>",{
+        style: "position: fixed;" +
+               "left: 10px; top: 10px; right: 10px; bottom: 10px; " +
+               "border: 1px solid gray; " +
+               "background-color: white; "+ 
+               "color: black;" +
+               "padding: 2px;"+
+               "z-index: 2147483647;"+ //maximal z-index (yes, there are pages close to this value)
+               "overflow: auto;",
+        id: prf + "vl_main"
+      }).append('<h1>VideLibri-Skript</h1><p>Das Kontozugriffs-Template wurde erstellt und muss nun nur noch in VideLibri eingetragen werden. In der Desktop-Version, kann dies direkt in dem Einstellungsdialog erfolgen, bei der Android-Version ist der Screen zu klein dafür, so dass es irgendwo hochgeladen, und in VideLibri wieder runtergeladen werden muss. Zum Runterladen, öffnet man den Einstellungsdialog der App, klickt auf den Button "Neue Bibliothek registrieren", gibt im neuen Dialog die URL im obersten Feld ein und klickt auf "installieren".  Zudem kann ein hochgeladene Template kann auch von der Desktop-Version runtergeladen werden.'+ 
+        '<p>Zum Hochladen auf die VideLibri-Sourceforge-Seite klicke diesen Button: <button id="'+prf+'_vl_upload">auf SF hochladen</button>. Die URL wird anschließend hier angezeigt: <div style="color:red; font-weight: bold" id="'+prf+'_vl_result"></div>'+
+        '<p>Es werden nur die drei unten angezeigten Dateien hochgeladen. Es macht Sinn diese vor dem Hochladen nochmal anzusehen, ob sie keine persönlichen Daten enthalten. (Kontonummer und Passwort sollten durch die $username und $password Platzhalter ersetzt worden sein) '+
+        '<p>Wer es auf einen eigenen Server hochladen will, muss diese Dateien dort hochladen, wobei die URL zu <code>bib.html</code> dann in VideLibri eingegeben werden muss:'+
+        '<p><code>template/template</code>:<br> <textarea id="'+prf+'_vl_template" style="width:90%; height: 10em"></textarea>'+
+        '<p><code>meta.xml</code>:<br> <textarea id="'+prf+'_vl_meta" style="width:90%; height: 6em"></textarea>'+
+        '<p><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="width:90%; height: 6em"></textarea>'
+        );   
+      $(document.body).append(lastpage);
+      var template = "<actions>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">') + "\n</actions>";
+      var firstRead = template.indexOf("<template>");
+      if (firstRead > 0) {
+        firstRead += "<template>".length;
+        for (; firstRead < template.length && template[firstRead] != ">"; firstRead++);
+        firstRead++
+        template = template.substring(0, firstRead) + "<s>vl:delete-current-books()</s>" + this.substring(firstRead, this.length);        
+      }
+      url = /url="(http:\/\/[^"]+)"/.exec(template); 
+      if (url) url = url[1];
+      $(prfid+"_vl_template").text(template);
+      $(prfid+"_vl_meta").text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'+
+        '<library>\n'+
+        '  <longName value="'+libName+'"/>\n'+
+        '  <shortName value="'+libName+'"/>\n'+
+        (url ? '  <catalogue value="'+url+'"/>\n'+
+            '  <homepage value="'+url+'"/>\n' : "") +
+        '  <id value="-_-_-_'+libName.replace( /[^0-9a-zA-Z]/, "", "g")+'"/>\n'+
+        '  <template value="template"/>\n'+
+        '</library>'       
+      );
+      $(prfid+"_vl_links").text(
+        '<html><head>\n'+
+        '  <link rel="videlibri.description" href="meta.xml"/>\n'+
+        '  <link rel="videlibri.template" href="template/template"/>\n'+
+        '</head><body>\n'+
+        '  Neues Template für  "'+libName+'"\n'+
+        '</body></html>\n'        
+      );
+      lastpage.append($("<button>", {
+         "text": "Zurück",
+         "click": function(){  switchVLPhase(phase - 1); lastpage.hide }
+       }));
+       $(prfid + "_vl_upload").click(function(){
+         var fd = new FormData();
+         fd.append("meta", $(prfid+"_vl_meta").text());
+         fd.append("links", $(prfid+"_vl_links").text());
+         fd.append("template", $(prfid+"_vl_links").text());
+         GM_xmlhttpRequest({
+           url: "http://videlibri.sourceforge.net/user/upload.php",
+           data: fd, //automatically sets content-type
+           method: "POST",
+           onload: function(response){
+             $(prfid + "_vl_result").text(response.responseText);
+           },
+           onerror: function(){ alert("Hochladen fehlgeschlagen!!!"); },
+           onabort: function(){ alert("Hochladen fehlgeschlagen!!!"); }
+         });
+       });
+   }
+   
    function switchVLPhase(p){
+     var oldValue = $(prfid+'_vlname').val();
+     if (oldValue) GM_setValue("vl_libName", oldValue);
+     //if (phase == p) return; does not work? has to be initialized once
      phase = p;
      GM_setValue("vl_phase", phase);
      var e = document.getElementById(prf+"_vl_base");
@@ -2308,15 +2391,40 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      ];
      /*3*/
      for (var i=0;i<bookFieldNames.length;i++)
-       texts.push('Markiere <span style="color:blue">'+bookFieldArticle[i]+' '+bookFieldNames[i]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[i]+ '"-Feld hat, auf "Weiter" klicken.');
+       texts.push('Markiere <span style="color:blue">'+bookFieldArticle[i]+' '+bookFieldNames[i]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[i]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>');
       ;
      
-     texts.push('Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).');
+     texts.push('Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt. (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).'); /* 3 + bookFields.length */
+     texts.push('Gebe den Namen der Bibliothek ein <input value="'+GM_getValue("vl_libName", "meine Bibliothek")+'" id="'+prf+'_vlname"/> und klicke auf "Weiter".');
+     texts.push("fertig");
      e.innerHTML = texts[p] + "<br><br>";
      $(e).append($("<button>", {
-       "text": "Weiter",
+       "text": "Weiter...",
        "click": function(){  switchVLPhase(phase + 1); }
-     }))
+     }));
+     $(e).append("<br><br><br><br><br>");
+     $(e).append($("<button>", {
+      "text": "Zurück",
+      "click": function(){  switchVLPhase(phase - 1); }
+      }));
+     $(e).append("(nur für Notfälle)");
+     
+     if (phase == 3 + bookFields.length && firstFieldTemplateRead) 
+       $(firstFieldTemplateRead).find(prfclass + "btnloop")[0].click();
+       
+     if (phase == 3 + bookFields.length + 2) { 
+       var firstVar = $(prfclass + "read_var")[0];
+       var firstSource = $(prfclass + "read_source")[0];
+      
+       if (firstVar && firstVar.value != "book") {
+         firstSource.value = '{"' + /book[.](.*)/.exec(firstVar.value)[1]+'": ' + firstSource.value + '}';
+         firstVar.value = "book";
+         regenerateTemplate();
+       }
+       
+       vlfinished();
+     }
+     
    };
    
    var loginParamFoundName = false;
@@ -2341,7 +2449,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      },
      "deactivated": function(){
        GM_setValue("vl_phase", 0);
-       phase = 0;
+       switchVLPhase(0);
        multipageClearAll();
      },
      "formParam": function(n, v){
@@ -2354,8 +2462,26 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      "newTemplateRead": function (tr){
        field = phase - 3;
        if (field >= 0 && field < bookFields.length) {
-         if (firstField == -1) firstField = field;
+         if (firstField == -1) { firstField = field; firstFieldTemplateRead = tr; }
          $(tr).find(prfclass + "read_var").val("book."+bookFields[field]);
+         if (bookFields[field] == "duedate") {
+           function guessFormat (date) {
+             var temp = /^[0-9]{4}([^0-9]+)[0-9]{1,2}([^0-9]+)[0-9]{1,2}/.exec(date);
+             if (temp) return "yyyy" + temp[1] + "m" + temp[2] + "d";
+             var temp = /^[0-9]{1,2}([^0-9]+)[0-9]{1,2}([^0-9]+)[0-9]{1,4}/.exec(date);
+             if (temp) return "d" + temp[1] + "m" + temp[2]+ "yyyy";
+           
+             var temp = /^[0-9]{4}([^0-9])[a-zA-ZäöüÄÖÜ]{3}([^0-9])[0-9]{1,2}/.exec(date);
+             if (temp) return "yyyy" + temp[1] + "mmm" + temp[2] + "d";
+             var temp = /^[0-9]{1,2}([^0-9])[a-zA-ZäöüÄÖÜ]{3}([^0-9])[0-9]{1,4}/.exec(date);
+             if (temp) return "d" + temp[1] + "mmm" + temp[2]+ "yyyy";
+             
+             return prompt("Konnte das Datumsformat von "+date+' nicht erkennen. Bitte gebe es mit folgender Notation ein\n d = Tag, m = Monat, y = Jahr.\nZ.B.: Datumsformat für "2 Dezember-14" ist "d mmmm-yy" oder für "13-01-01" wäre es "yy-mm-dd" (ohne " eingeben) ');
+           }
+           var date = tr.textContent.trim();
+           var format = guessFormat(date);
+           $(tr).find(prfclass + "read_source").val("parse-date(., '"+format.replace("'", "''", "g")+"')");
+         }
        }
      }
    }
