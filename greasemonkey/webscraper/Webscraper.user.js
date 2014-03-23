@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Webscraper / Xidelscript
+// @name        Videlibri-Script
 // @namespace   http://www.benibela.de
 // @include     *
 // @version     5
@@ -7,7 +7,10 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_xmlhttpRequest
+// @grant       GM_info
 // ==/UserScript==
+
+// @name        Webscraper / Xidelscript
 
 /***************************************************************************
  *   copyright       : (C) 2012 Benito van der Zander                      *
@@ -188,7 +191,12 @@ function dragStop(event) {
 
 //******************************************************************************
 
+var interceptor = {};
+var lang = 0;
 
+function tr(en, de) {
+  return (!lang || !de) ? en : de;
+}
 
 var prf = "__scraper_";
 var prfid = "#" + prf;
@@ -316,11 +324,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
        .append("Multipage template")
        .append($("<button/>", {id: prf + "multipageclearall", text: "clear all", style:"display: none",  click: function(){
          if (!confirm("Are you sure you want to remove all templates below? This action is not reversible.")) return;
-         GM_setValue("multipageTemplate", "[]");
-         GM_setValue("multipageVariables", "");
-         $(prfid+"multipage").css("display", "none");
-         multipageInitialized = false;
-         toggleMultipageScraping();
+         multipageClearAll();
        }}))
        .append($("<div/>", {
          id: prf + "multipage",
@@ -484,7 +488,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
 //alert(localStorage[prf+"guiposition"]);
       
       //  $( prfid + "moveleft").click(); works, but then causes an exception :(
-      
+      if (interceptor.init_maininterface) interceptor.init_maininterface();
     } else mainInterface.show();
     $(prfid+"activation").hide();
 
@@ -499,6 +503,8 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
       } else mainInterface.css("right", "10px");
     }
   }
+  
+  if (interceptor.activated) interceptor.activated();
 }
 
 function deactivateScraper(){
@@ -509,6 +515,8 @@ function deactivateScraper(){
     $(document.body.parentNode).css("left", "0").css("width", "100%");
     changedBody = false;
   }
+  
+  if (interceptor.deactivated) interceptor.deactivated();
 }
 
 function isMultipageScrapingEnabled(){
@@ -659,15 +667,22 @@ function toggleMultipageScraping(){
           var an = []; var av = [];
           for (var i=0; i<this.elements.length; i++){          
             var e = this.elements[i];
+            var n = e.getAttribute('name');
             var v = getElementValue(e);
-            if (!e.getAttribute('name')) continue;
+            if (!n) continue;
             if (e.getAttribute(prf + "oldValue") == v) continue;
             if (e.tagName == "INPUT" 
                 && e.getAttribute('type') 
                 && (e.getAttribute('type').toLowerCase() == "radio" || e.getAttribute('type').toLowerCase() == "checkbox") 
                 && !e.checked)
               continue;
-            an.push(e.getAttribute("name"));
+            n = '"' +n.replace('"', '""', "g")+'"';
+            v = '"' +v.replace('"', '""', "g")+'"';
+            if (interceptor.formParam) {
+              var inter = interceptor.formParam(n, v);
+              if (inter) { n = inter[0]; v = inter[1]; }
+            }
+            an.push(n);
             av.push(v);
           };
           var ser = "";
@@ -675,8 +690,7 @@ function toggleMultipageScraping(){
           else {
             for (var i=0;i<an.length;i++) {
               if (ser != '') ser += ', ';
-              ser += '"' + an[i].replace('"', '""', "g") + '": ' 
-                   + '"' + av[i].replace('"', '""', "g") + '"' ;
+              ser += an[i]+ ': '+ av[i];
             }
             ser = 'form(., {' + ser + '})';
           }
@@ -784,6 +798,14 @@ function toggleMultipageScraping(){
     $(prfid+"multipageclearall").hide();
     GM_setValue("multipageActive", false);
   }
+}
+
+function multipageClearAll(){
+  GM_setValue("multipageTemplate", "[]");
+  GM_setValue("multipageVariables", "");
+  $(prfid+"multipage").css("display", "none");
+  multipageInitialized = false;
+  toggleMultipageScraping();
 }
 
 
@@ -1299,6 +1321,8 @@ function addRangeToTemplate(range, selection){
       }
     }
     $(templateRead).hover(function(){v = true; changeVisibility()}, function(){v = false; setTimeout(changeVisibility, 250);});
+    
+    if (interceptor.newTemplateRead) interceptor.newTemplateRead(templateRead); 
   }
   
   if (window.searchingRepetition) 
@@ -2243,19 +2267,129 @@ GUI:
   
   
 
+
+
+
+
+var inIframe = window.frameElement && window.frameElement.nodeName == "IFRAME";
+
+if (!inIframe) { //iframe screws up multipage templates
+
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+//------------------------------------VIDELIBRI SCRIPT BLOCK----------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+
+
+//should be another script, but greasemonkey @require sucks
+
+
+if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
+   lang = 1;
+   var bookFields = ["title", "author", "id", "duedate", "status", "year"];
+   var bookFieldNames = ["Titel", "Autor", "Signatur", "Leihfristende", "Bemerkung zum Verlängerungsstatus", "Erscheinungsjahr"];
+   var bookFieldArticle = ["den", "den", "die", "das", "die", "das"];
+   var phase = GM_getValue("vl_phase", 0);
+   if (phase >= 3 && phase < 3 + bookFields.length) phase = 3;
+   var firstField = -1;
+   function switchVLPhase(p){
+     phase = p;
+     GM_setValue("vl_phase", phase);
+     var e = document.getElementById(prf+"_vl_base");
+     var texts = [
+       "<b>Erstellung eines einfachen Konto-Template<br><br>"+
+       "Es müssen mindestens zwei Ausleihen vorhanden sein und das Skript erzeugt momentan nur ein Anzeige-Template ohne Verlängerung. <br><br>"+
+       "<span style='color: red'>Folge den normalen Links durch den Bibliothekkatalog, bis zur Anmelde-Seite für den Kontozugriff</span>. (noch nicht anmelden)<br>"+
+       'Dann auf "Weiter" klicken.<br><br>(manchmal wird das Skript zu früh aktiviert, weil dies noch nicht die Katalogseite ist oder das Skript jetzt die Links blockiert. In dem Fall dieses kleine (!) Fenster mit dem X schließen, F5 drücken und den roten Button erst später klicken)',
+       /*1*/ 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.',
+       /*2*/'Folge den normalen Links durch den Bibliothekkatalog, bis die Liste der Ausleihen angezeigt wird. Dann auf "Weiter" klicken.'
+     ];
+     /*3*/
+     for (var i=0;i<bookFieldNames.length;i++)
+       texts.push('Markiere <span style="color:blue">'+bookFieldArticle[i]+' '+bookFieldNames[i]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[i]+ '"-Feld hat, auf "Weiter" klicken.');
+      ;
+     
+     texts.push('Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).');
+     e.innerHTML = texts[p] + "<br><br>";
+     $(e).append($("<button>", {
+       "text": "Weiter",
+       "click": function(){  switchVLPhase(phase + 1); }
+     }))
+   };
+   
+   var loginParamFoundName = false;
+   var loginParamFoundPass = false;
+   
+   interceptor = {
+     "init_afterbtn": function(){
+       $(prfid + "activation").append("<div><br><br><br>Öffne den Bibliothekkatalog und klicke dann diesen Button</div>");
+     },
+     "init_maininterface": function(){
+       $(prfid + "gui b:first").hide();
+       $(prfid + "gui").prepend( 
+         '<div><b>VideLibri-Skript: </b>' +
+         '<div id="'+prf+'_vl_base">'+
+         '</div>' +
+         '<div style="margin-top: 400px">"Experten"-Konfiguration:<br><br></div></div>'
+       );
+       switchVLPhase(phase);
+     },
+     "activated": function(){
+       if (!isMultipageScrapingEnabled()) GM_setValue("multipageActive", true);
+     },
+     "deactivated": function(){
+       GM_setValue("vl_phase", 0);
+       phase = 0;
+       multipageClearAll();
+     },
+     "formParam": function(n, v){
+       if (phase == 1) {
+         if (!loginParamFoundName && confirm('Ist ' +v+ ' die Kartennummer?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundName = true; return [n, "$username"]; }
+         if (!loginParamFoundPass && confirm('Ist ' +v+ ' das Passwort?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundPass = true; return [n, "$password"]; }
+                  
+       }
+     },
+     "newTemplateRead": function (tr){
+       field = phase - 3;
+       if (field >= 0 && field < bookFields.length) {
+         if (firstField == -1) firstField = field;
+         $(tr).find(prfclass + "read_var").val("book."+bookFields[field]);
+       }
+     }
+   }
+}
+
+ 
+
+
+
+
+
+
+
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+
+
   
   
 $("<div/>",{
-  text: "Activate Scraping",
+  text: tr("Activate Scraping", "Aktivieren"),
   style: "position: fixed;" +
          "right: 10px; top: 10px; " +
          "border: 2px solid red; " +
          "background-color: white; "+ 
          "color: black; "+
+         "text-align: center; "+
          "cursor: pointer; padding: 2px; z-index: 2147483647",
   id: prf + "activation",
   click:  activateScraper
 }).appendTo("body");
+
+if (interceptor.init_afterbtn) interceptor.init_afterbtn();
 
 if (!localStorage[prf+"_deactivated"]) {
   activateScraper();
@@ -2272,3 +2406,21 @@ if (GM_getValue("optionTableDisplay", "none") != "none") {
   $(prfid+"optiontable").show(); 
   $(prfid+"optioncheckbox").prop("checked", "checked");
 }
+
+
+
+
+
+
+
+
+
+
+} //end if inIframe
+
+
+
+
+
+
+
