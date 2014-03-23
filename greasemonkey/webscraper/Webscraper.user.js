@@ -2349,7 +2349,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         '  <link rel="videlibri.description" href="meta.xml"/>\n'+
         '  <link rel="videlibri.template" href="template/template"/>\n'+
         '</head><body>\n'+
-        '  Neues Template für  "'+libName+'"\n'+
+        '  Neues Template f&uuml;r  "'+libName+'"\n'+
         '</body></html>\n'        
       );
       lastpage.append($("<button>", {
@@ -2360,13 +2360,13 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
          var fd = new FormData();
          fd.append("meta", $(prfid+"_vl_meta").text());
          fd.append("links", $(prfid+"_vl_links").text());
-         fd.append("template", $(prfid+"_vl_links").text());
+         fd.append("template", $(prfid+"_vl_template").text());
          GM_xmlhttpRequest({
            url: "http://videlibri.sourceforge.net/user/upload.php",
            data: fd, //automatically sets content-type
            method: "POST",
            onload: function(response){
-             $(prfid + "_vl_result").text(response.responseText);
+             $(prfid + "_vl_result").html(response.responseText);
            },
            onerror: function(){ alert("Hochladen fehlgeschlagen!!!"); },
            onabort: function(){ alert("Hochladen fehlgeschlagen!!!"); }
