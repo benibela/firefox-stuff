@@ -254,7 +254,7 @@ function makeselect(caption, id, values, def){
 
 
 function activateScraper(){ 
-  localStorage[prf+"_deactivated"] = "";
+  localStorage[prf+"_deactivated"] = "false";
   if (!mainInterface || mainInterface.css("display") == "none") {
     if (!mainInterface) {
       var gui = $(
@@ -805,6 +805,7 @@ function toggleMultipageScraping(){
     $(prfid+"multipageclearall").hide();
     GM_setValue("multipageActive", false);
   }
+  document.getElementById(prf+"multipagecheckbox").checked = GM_getValue("multipageActive", false);
 }
 
 function multipageClearAll(){
@@ -812,6 +813,13 @@ function multipageClearAll(){
   GM_setValue("multipageVariables", "");
   $(prfid+"multipage").css("display", "none");
   multipageInitialized = false;
+  toggleMultipageScraping();
+}
+
+function enableMultipage(){
+  GM_setValue("multipageActive", true);
+  if (isMultipageScrapingEnabled() && document.getElementById(prf+"multipagecheckbox").checked) return;
+  $(prfid+"multipage").css("display", "none");
   toggleMultipageScraping();
 }
 
@@ -2325,9 +2333,9 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         '<p>Zum Hochladen auf die VideLibri-Sourceforge-Seite klicke diesen Button: <button id="'+prf+'_vl_upload">auf SF hochladen</button>. Die URL wird anschließend hier angezeigt: <div style="color:red; font-weight: bold" id="'+prf+'_vl_result"></div>'+
         '<p>Es werden nur die drei unten angezeigten Dateien hochgeladen. Es macht Sinn diese vor dem Hochladen nochmal anzusehen, ob sie keine persönlichen Daten enthalten. (Kontonummer und Passwort sollten durch die $username und $password Platzhalter ersetzt worden sein) '+
         '<p>Wer es auf einen eigenen Server hochladen will, muss diese Dateien dort hochladen, wobei die URL zu <code>bib.html</code> dann in VideLibri eingegeben werden muss:'+
-        '<p><code>template/template</code>:<br> <textarea id="'+prf+'_vl_template" style="width:90%; height: 10em"></textarea>'+
-        '<p><code>meta.xml</code>:<br> <textarea id="'+prf+'_vl_meta" style="width:90%; height: 6em"></textarea>'+
-        '<p><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="width:90%; height: 6em"></textarea>'
+        '<div style="display:block"><code>template/template</code>:<br> <textarea id="'+prf+'_vl_template" style="float: none; width:90%; height: 10em"></textarea><br></div>'+
+        '<div style="display:block"><code>meta.xml</code>:<br> <textarea id="'+prf+'_vl_meta" style="float: none; width:90%; height: 6em"></textarea><br></div>'+
+        '<div style="display:block"><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="float: none; width:90%; height: 6em"></textarea><br></div>'
         );   
       $(document.body).append(lastpage);
       var template = "<actions>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">') + "\n</actions>";
@@ -2394,7 +2402,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        "Es müssen mindestens zwei Ausleihen vorhanden sein und das Skript erzeugt momentan nur ein Anzeige-Template ohne Verlängerung. <br><br>"+
        "<span style='color: red'>Folge den normalen Links durch den Bibliothekkatalog, bis zur Anmelde-Seite für den Kontozugriff</span>. (noch nicht anmelden)<br>"+
        'Dann auf "Weiter" klicken.<br><br>(manchmal wird das Skript zu früh aktiviert, weil dies noch nicht die Katalogseite ist oder das Skript jetzt die Links blockiert. In dem Fall dieses kleine (!) Fenster mit dem X schließen, F5 drücken und den roten Button erst später klicken)',
-       /*1*/ 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.',
+       /*1*/ 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.<br>(Zum Einloggen ist es besser den grafischen Button zu klicken als Enter)',
        /*2*/'Folge den normalen Links durch den Bibliothekkatalog, bis die Liste der Ausleihen angezeigt wird. Dann auf "Weiter" klicken.'
      ];
      /*3*/
@@ -2416,6 +2424,11 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
       "click": function(){  switchVLPhase(phase - 1); }
       }));
      $(e).append("(nur für Notfälle)");
+     
+     if (phase == 3) {
+       firstField = -1;
+       firstFieldTemplateRead = null;
+     }
      
      if (phase == 3 + bookFields.length && firstFieldTemplateRead) 
        $(firstFieldTemplateRead).find(prfclass + "btnloop")[0].click();
@@ -2441,6 +2454,8 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    interceptor = {
      "init_afterbtn": function(){
        $(prfid + "activation").append("<div><br><br><br>Öffne den Bibliothekkatalog und klicke dann diesen Button</div>");
+       if (!localStorage[prf+"_deactivated"]) 
+         localStorage[prf+"_deactivated"] = "true";
      },
      "init_maininterface": function(){
        $(prfid + "gui b:first").hide();
@@ -2453,7 +2468,10 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        switchVLPhase(phase);
      },
      "activated": function(){
-       if (!isMultipageScrapingEnabled()) GM_setValue("multipageActive", true);
+       if (!isMultipageScrapingEnabled()) enableMultipage();
+     },
+     "activationButton": function(){
+       interceptor.deactivated();
      },
      "deactivated": function(){
        GM_setValue("vl_phase", 0);
@@ -2520,17 +2538,17 @@ $("<div/>",{
          "text-align: center; "+
          "cursor: pointer; padding: 2px; z-index: 2147483647",
   id: prf + "activation",
-  click:  activateScraper
+  click:  function(){ 
+    activateScraper();
+    if (interceptor.activationButton) interceptor.activationButton();
+  }
 }).appendTo("body");
 
 if (interceptor.init_afterbtn) interceptor.init_afterbtn();
 
-if (!localStorage[prf+"_deactivated"]) {
+if (localStorage[prf+"_deactivated"] != "true") {
   activateScraper();
-  if (GM_getValue("multipageActive", false)) {
-    document.getElementById(prf+"multipagecheckbox").checked = true;
-    toggleMultipageScraping();
-  }
+  if (GM_getValue("multipageActive", false)) enableMultipage();
 
 
   //setTimeout(UNIT_TESTS, 50);
