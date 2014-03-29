@@ -619,8 +619,13 @@ function toggleMultipageScraping(){
         GM_setValue("FORM_URL", "");
         GM_setValue("FORM_DATA", "");
       }
-
       oldMultipage.push({url: curUrl, repeat: false, test: "", template: $(prfid+"template").val(), post: oldData});
+//alert("??: "+oldMultipage.length);
+//alert("??: "+JSON.stringify(oldMultipage));
+      /*if (oldMultipage.length >= 2 ) {
+        alert(oldMultipage[oldMultipage.length-2].url );
+        alert(oldMultipage[oldMultipage.length-1].url );
+      }*/
       while (oldMultipage.length >= 2 
             &&
              ( (  oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url 
@@ -761,8 +766,10 @@ function toggleMultipageScraping(){
         setTimeout(function(){
           var as = document.getElementsByTagName("a");
           for (var i=as.length-1;i>=0;i--) {
-            var newA = document.createElement("a");
-            newA.innerHTML = as[i].innerHTML;
+            var newA = document.createElement("a");            
+            //newA.innerHTML = as[i].innerHTML;
+            if (as[i].textContent != "")
+              newA.textContent = as[i].textContent; //if there are child elements (like in <a><span>x</></a>) the read expression binds to them instead the link.
             as[i].style.display = "none";
             newA.href = "javascript:;"; //when changing here, update followLink
             newA.className = as[i].className;
@@ -824,13 +831,14 @@ function regenerateMultipageTemplate(){
     });
   }
 
-  var vars = $(prfid+"multipageVariables").val();
-  
-  if (!vars) {
-    pages = JSON.parse(GM_getValue("multipageTemplate", JSON.stringify(pages)));
-    vars = GM_getValue("multipageVariables", "");
-  } else {
-    GM_setValue("multipageTemplate", JSON.stringify(pages));
+
+  if (pages.length == 0) pages = JSON.parse(GM_getValue("multipageTemplate", JSON.stringify(pages)));
+  else GM_setValue("multipageTemplate", JSON.stringify(pages));
+
+  var vars = $(prfid+"multipageVariables"); //what was this for?
+  if (vars.length == 0) vars = GM_getValue("multipageVariables", "");
+  else {
+    vars = vars.val();
     GM_setValue("multipageVariables", vars);
   }
   
@@ -2328,7 +2336,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         firstRead += "<template>".length;
         for (; firstRead < template.length && template[firstRead] != ">"; firstRead++);
         firstRead++
-        template = template.substring(0, firstRead) + "<s>vl:delete-current-books()</s>" + this.substring(firstRead, this.length);        
+        template = template.substring(0, firstRead) + "<s>vl:delete-current-books()</s>" + template.substring(firstRead, template.length);        
       }
       url = /url="(http:\/\/[^"]+)"/.exec(template); 
       if (url) url = url[1];
@@ -2354,7 +2362,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
       );
       lastpage.append($("<button>", {
          "text": "Zurück",
-         "click": function(){  switchVLPhase(phase - 1); lastpage.hide }
+         "click": function(){  switchVLPhase(phase - 1); lastpage.hide(); }
        }));
        $(prfid + "_vl_upload").click(function(){
          var fd = new FormData();
