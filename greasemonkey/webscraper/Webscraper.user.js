@@ -2370,7 +2370,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
       );
       lastpage.append($("<button>", {
          "text": "Zurück",
-         "click": function(){  switchVLPhase(phase - 1); lastpage.hide(); }
+         "click": function(){  switchVLPhase(phase - 1); lastpage.hide(); mainInterface.show(); }
        }));
        $(prfid + "_vl_upload").click(function(){
          var fd = new FormData();
@@ -2397,23 +2397,37 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      phase = p;
      GM_setValue("vl_phase", phase);
      var e = document.getElementById(prf+"_vl_base");
-     var texts = [
-       "<b>Erstellung eines einfachen Konto-Template<br><br>"+
-       "Es müssen mindestens zwei Ausleihen vorhanden sein und das Skript erzeugt momentan nur ein Anzeige-Template ohne Verlängerung. <br><br>"+
-       "<span style='color: red'>Folge den normalen Links durch den Bibliothekkatalog, bis zur Anmelde-Seite für den Kontozugriff</span>. (noch nicht anmelden)<br>"+
-       'Dann auf "Weiter" klicken.<br><br>(manchmal wird das Skript zu früh aktiviert, weil dies noch nicht die Katalogseite ist oder das Skript jetzt die Links blockiert. In dem Fall dieses kleine (!) Fenster mit dem X schließen, F5 drücken und den roten Button erst später klicken)',
-       /*1*/ 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.<br>(Zum Einloggen ist es besser den grafischen Button zu klicken als Enter)',
-       /*2*/'Folge den normalen Links durch den Bibliothekkatalog, bis die Liste der Ausleihen angezeigt wird. Dann auf "Weiter" klicken.'
-     ];
-     /*3*/
-     for (var i=0;i<bookFieldNames.length;i++)
-       texts.push('Markiere <span style="color:blue">'+bookFieldArticle[i]+' '+bookFieldNames[i]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[i]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>');
-      ;
+     var ct = "";
+     switch (p) {
+       case 0: ct = "<b>Erstellung eines einfachen Konto-Template<br><br>"+
+                    "Es müssen mindestens zwei Ausleihen vorhanden sein. <br><br>"+
+                    "<span style='color: red'>Folge den normalen Links durch den Bibliothekkatalog, bis zur Anmelde-Seite für den Kontozugriff</span>. (noch nicht anmelden)<br>"+
+                    'Dann auf "Weiter" klicken.<br><br>(manchmal wird das Skript zu früh aktiviert, weil dies noch nicht die Katalogseite ist oder das Skript jetzt die Links blockiert. In dem Fall dieses kleine (!) Fenster mit dem X schließen, F5 drücken und den roten Button erst später klicken)'; break;
+       case 1: ct = 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.<br>(Zum Einloggen ist es besser den grafischen Button zu klicken als Enter)'; break;
+       case 2: ct = 'Folge den normalen Links durch den Bibliothekskatalog, bis die Liste der Ausleihen angezeigt wird. Dann auf "Weiter" klicken.'; break;
+     };
+     if (p >= 3 && p < 3 + bookFieldNames.length + 1) {
+        var loopRead = $(prfclass + "templateLoop").length > 0;
+       if (loopRead || firstField == -1 || !firstFieldTemplateRead) {
+         var q = (loopRead ? p - 1 : p) - 3;
+         if (q >= 0 && q < bookFieldNames.length) 
+           ct = 'Markiere <span style="color:blue">'+bookFieldArticle[q]+' '+bookFieldNames[q]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[q]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>';
+         else if (q < 0) 
+           ct = 'Wurde "Zurück" gedrückt? Dann wird dieser Schritt übersprungen, solange grüne markierte Zeilen vorhanden sind.';
+         else
+           ct = "Keine Bucheigenschaften markiert! So geht es nicht.";
+        } else { 
+          ct = 'Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt. (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).'
+          
+          $(firstFieldTemplateRead).find(prfclass + "btnloop")[0].click();
+        }
+     } else if (p == 3 + bookFieldNames.length + 1) {
+       ct = 'Gebe den Namen der Bibliothek ein <input value="'+GM_getValue("vl_libName", "meine Bibliothek")+'" id="'+prf+'_vlname"/> und klicke auf "Weiter".';
+     } else if (p == 3 + bookFieldNames.length + 1 + 1) {
+       ct = "fertig";
+     }    
      
-     texts.push('Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt. (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).'); /* 3 + bookFields.length */
-     texts.push('Gebe den Namen der Bibliothek ein <input value="'+GM_getValue("vl_libName", "meine Bibliothek")+'" id="'+prf+'_vlname"/> und klicke auf "Weiter".');
-     texts.push("fertig");
-     e.innerHTML = texts[p] + "<br><br>";
+     e.innerHTML = ct + "<br><br>";
      $(e).append($("<button>", {
        "text": "Weiter...",
        "click": function(){  switchVLPhase(phase + 1); }
@@ -2428,10 +2442,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      if (phase == 3) {
        firstField = -1;
        firstFieldTemplateRead = null;
-     }
-     
-     if (phase == 3 + bookFields.length && firstFieldTemplateRead) 
-       $(firstFieldTemplateRead).find(prfclass + "btnloop")[0].click();
+     }           
        
      if (phase == 3 + bookFields.length + 2) { 
        var firstVar = $(prfclass + "read_var")[0];
@@ -2487,8 +2498,12 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      },
      "newTemplateRead": function (tr){
        field = phase - 3;
-       if (field >= 0 && field < bookFields.length) {
+       if (field >= 0 && field < bookFields.length + 1) {
          if (firstField == -1) { firstField = field; firstFieldTemplateRead = tr; }
+         else {
+           var loopRead = $(prfclass + "templateLoop").length > 0;
+           if (loopRead) field --;
+         }
          $(tr).find(prfclass + "read_var").val("book."+bookFields[field]);
          if (bookFields[field] == "duedate") {
            function guessFormat (date) {
