@@ -907,6 +907,7 @@ function indexOfNode(nl, e) {  //overriding NodeList.indexOf didn't work, perhap
 } 
 
 function removeWhileEmptyTextNode(e){ 
+  if (!e) return;
   var p = e.parentNode;
   var i = indexOfNode(p.childNodes, e);
   var c = 0;
@@ -1218,7 +1219,8 @@ function addRangeToTemplate(range, selection){
         varnameChanged.call(this);        
         if (multipageInitialized && $(prfid + "multipageAutoFollow").is(':checked')) {
           regenerateTemplate();
-          setTimeout(function(){t.click();}, 200); //after regen
+          if (interceptor.allowAutoFollow && interceptor.allowAutoFollow())
+            setTimeout(function(){t.click();}, 200); //after regen
         } 
       }
     }
@@ -2308,11 +2310,12 @@ if (!inIframe) { //iframe screws up multipage templates
 
 if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    lang = 1;
-   var bookFields = ["title", "author", "id", "duedate", "status", "year"];
-   var bookFieldNames = ["Titel", "Autor", "Signatur", "Leihfristende", "Bemerkung zum Verlängerungsstatus", "Erscheinungsjahr"];
-   var bookFieldArticle = ["den", "den", "die", "das", "die", "das"];
+   var bookFields = ["title", "author", "id", "duedate", "status", "year", "_renewlink", "_renewid"];
+   var bookFieldNames = ["Titel", "Autor", "Signatur", "Leihfristende", "Bemerkung zum Verlängerungsstatus", "Erscheinungsjahr", "Verlängerungslink", "Verlängerungscheckbox"];
+   var bookFieldArticle = ["den", "den", "die", "das", "die", "das", "den", "die"];
    var phase = GM_getValue("vl_phase", 0);
-   if (phase >= 3 && phase < 3 + bookFields.length) phase = 3;
+   var PHASE_FIRSTBOOKPROP = 3;
+   if (phase >= PHASE_FIRSTBOOKPROP && phase < PHASE_FIRSTBOOKPROP + bookFields.length + 1) phase = 3;
    var firstField = -1;
    var firstFieldTemplateRead;
    function vlfinished(){
@@ -2410,11 +2413,14 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         var loopRead = $(prfclass + "templateLoop").length > 0;
        if (loopRead || firstField == -1 || !firstFieldTemplateRead) {
          var q = (loopRead ? p - 1 : p) - 3;
-         if (q >= 0 && q < bookFieldNames.length) 
-           ct = 'Markiere <span style="color:blue">'+bookFieldArticle[q]+' '+bookFieldNames[q]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[q]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>';
-         else if (q < 0) 
+         if (q < 0) 
            ct = 'Wurde "Zurück" gedrückt? Dann wird dieser Schritt übersprungen, solange grüne markierte Zeilen vorhanden sind.';
-         else
+         else if (q < bookFieldNames.length - 2) 
+           ct = 'Markiere <span style="color:blue">'+bookFieldArticle[q]+' '+bookFieldNames[q]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[q]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>';
+         else if (q < bookFieldNames.length) {
+           var link = q == bookFieldNames.length - 2;
+           ct = "Wenn ein Template mit Verlängerungsmöglichkeit erstellt werden soll, und "+(link ? "es in jeder Zeile einen Link zum Verlängern eines einzelnen Buches gibt, klicke auf den Verlängerungslink des ersten Buches und danach auf 'Weiter'." : 'es in jeder Zeile eine Checkbox gibt, mit der sich ein Buch zum Verlängern markieren gibt, klicke auf diese Checkbox und dann auf "Weiter". ')+'<br><br>Wenn es das nicht gibt, einfach so auf "Weiter klicken".';
+         } else
            ct = "Keine Bucheigenschaften markiert! So geht es nicht.";
         } else { 
           ct = 'Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt. (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).'
@@ -2524,8 +2530,30 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
            $(tr).find(prfclass + "read_source").val("parse-date(., '"+format.replace("'", "''", "g")+"')");
          }
        }
+     },
+     "allowAutoFollow": function(){
+     alert(phase );
+     alert(PHASE_FIRSTBOOKPROP + bookFieldNames.length - 2);
+       return phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 2 + 1;
      }
    }
+   
+   if (phase == PHASE_FIRSTBOOKPROP)
+     $('input[type=checkbox]').click(function(){
+       if (firstField == -1) return;
+       if (phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1) return;
+          if (this.childNodes.length > 0) {
+            this.removeChild(this.childNodes[0]);
+            regenerateTemplate();
+            this.parentNode.style.backgroundColor = "";
+          } else {
+            var range = document.createRange();
+            range.setStartBefore(this);
+            range.setEndAfter(this);             
+            addRangeToTemplate(range);
+            this.parentNode.style.backgroundColor = "blue";
+          }
+     })
 }
 
  
