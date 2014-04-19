@@ -612,7 +612,7 @@ function toggleMultipageScraping(){
       var oldData = "";
       
       if (GM_getValue("FORM_URL", "") != "" || GM_getValue("FORM_DATA", "") != "") {
-        if (GM_getValue("FORM_URL") == "{$follow}") GM_setValue(prf + "LAST_FOLLOW_URL", curUrl)
+        if (GM_getValue("FORM_URL") &&  GM_getValue("FORM_URL").indexOf("$follow") >= 0) GM_setValue(prf + "LAST_FOLLOW_URL", curUrl)
         else GM_setValue(prf + "LAST_FOLLOW_URL", "");
         if (GM_getValue("FORM_URL") != "") curUrl = GM_getValue("FORM_URL");
         if (GM_getValue("FORM_DATA") != "") oldData = GM_getValue("FORM_DATA");
@@ -629,8 +629,8 @@ function toggleMultipageScraping(){
       while (oldMultipage.length >= 2 
             &&
              ( (  oldMultipage[oldMultipage.length-2].url == oldMultipage[oldMultipage.length-1].url 
-                 && oldMultipage[oldMultipage.length-2].url != "{$follow}")
-               || (oldMultipage[oldMultipage.length-2].url == "{$follow}" 
+                 && oldMultipage[oldMultipage.length-2].url.indexOf("$follow") >= 0)
+               || (oldMultipage[oldMultipage.length-2].url.indexOf("{$follow") < 0
                    && oldMultipage[oldMultipage.length-1].url == GM_getValue(prf + "LAST_FOLLOW_URL")) ) 
             && (oldMultipage[oldMultipage.length-1].template == "" || oldMultipage[oldMultipage.length-1].template == "waiting for selection..."))
           oldMultipage.pop(); //remove useless duplicates caused by reloads
@@ -708,11 +708,11 @@ function toggleMultipageScraping(){
           range.setEndAfter(tempElement);             
           addRangeToTemplate(range);
            
-          $(this).find(prfclass+"read_var").first().val("follow");
+          $(this).find(prfclass+"read_var").first().val(multipageNextFollowVar());
           $(this).find(prfclass+"read_source").first().val(ser);
           tempElement.textContent = "";
           regenerateTemplate();
-          GM_setValue("FORM_URL", "{$follow}");
+          GM_setValue("FORM_URL", "{$"+multipageNextFollowVar()+"}");
         });
         /*
         $("form").submit(function(){
@@ -850,7 +850,16 @@ function regenerateMultipageTemplate(){
     GM_setValue("multipageVariables", vars);
   }
   
-  var res = "<action>\n";
+  var res = "<action>\n";  
+  var followedVars = "";
+  for (var i=0;i < pages.length; i++){ //initialize follow vars, so optional elements abort the following
+    var m = /[{][$](.*)[}]/.exec(pages[i].url); 
+    if (m) 
+      if (followedVars) followedVars += ", " + m[1] + " := ()";
+      else followedVars = m[1] + " := ()";
+ 
+  }
+  if (followedVars) res += "  <s>" + followedVars + "</s>\n";
   if (vars != "") {
     res += '  <page><template>{' + vars + '}</template></page>\n\n';
   }
@@ -877,6 +886,14 @@ function regenerateMultipageTemplate(){
   }
   res += "</action>";
   $(prfid+"multipagetemplate").val(res);
+}
+
+function multipageNextFollowIndex(){
+  var pages = JSON.parse(GM_getValue("multipageTemplate", JSON.stringify(pages)));
+  if (!pages || !pages.length) return "follow1";
+  var m = /[{][$]_?follow([0-9]+)/.exec(pages[pages.length-1].url);
+  if (!m) return "follow1";
+  return "follow" + (m[1]*1+1); 
 }
 
 function myCreate(name, properties){ //basically the same as $(name, properties).get(), but latter can't be passed to surroundContents
@@ -1212,9 +1229,9 @@ function addRangeToTemplate(range, selection){
         var link = p.parent(); 
         if (multipageInitialized && link.attr("href") == "javascript:;") 
           link = link.next();
-        setTimeout(function(){ GM_setValue("FORM_URL", "{$follow}"); link[0].click(); }, 100);
+        setTimeout(function(){ GM_setValue("FORM_URL", "{$"+multipageNextFollowIndex()+"}"); link[0].click(); }, 100);
       } else {
-        p.find("."+prf+"read_var").val(multipageInitialized ? "follow" : "_follow");
+        p.find("."+prf+"read_var").val(multipageInitialized ? multipageNextFollowIndex()  : "_follow");
         p.find("."+prf+"read_source").val("@href");
         varnameChanged.call(this);        
         if (multipageInitialized && $(prfid + "multipageAutoFollow").is(':checked')) {
@@ -2532,8 +2549,8 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        }
      },
      "allowAutoFollow": function(){
-     alert(phase );
-     alert(PHASE_FIRSTBOOKPROP + bookFieldNames.length - 2);
+     //alert(phase );
+     //alert(PHASE_FIRSTBOOKPROP + bookFieldNames.length - 2);
        return phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 2 + 1;
      }
    }
