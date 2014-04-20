@@ -2,7 +2,7 @@
 // @name        Videlibri-Script
 // @namespace   http://www.benibela.de
 // @include     *
-// @version     5
+// @version     7
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -708,11 +708,11 @@ function toggleMultipageScraping(){
           range.setEndAfter(tempElement);             
           addRangeToTemplate(range);
            
-          $(this).find(prfclass+"read_var").first().val(multipageNextFollowVar());
+          $(this).find(prfclass+"read_var").first().val(multipageNextFollowIndex());
           $(this).find(prfclass+"read_source").first().val(ser);
           tempElement.textContent = "";
           regenerateTemplate();
-          GM_setValue("FORM_URL", "{$"+multipageNextFollowVar()+"}");
+          GM_setValue("FORM_URL", "{$"+multipageNextFollowIndex()+"}");
         });
         /*
         $("form").submit(function(){
@@ -2358,13 +2358,13 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         '<div style="display:block"><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="float: none; width:90%; height: 6em"></textarea><br></div>'
         );   
       $(document.body).append(lastpage);
-      var template = "<actions>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">') + "\n</actions>";
+      var template = "<actions>\n<action id=\"connect\"></action>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">') + "\n</actions>";
       var firstRead = template.indexOf("<template>");
       if (firstRead > 0) {
         firstRead += "<template>".length;
         for (; firstRead < template.length && template[firstRead] != ">"; firstRead++);
         firstRead++
-        template = template.substring(0, firstRead) + "<s>vl:delete-current-books()</s>" + template.substring(firstRead, template.length);        
+        template = template.substring(0, firstRead) + "<t:s>vl:delete-current-books()</t:s>" + template.substring(firstRead, template.length);        
       }
       url = /url="(http:\/\/[^"]+)"/.exec(template); 
       if (url) url = url[1];
@@ -2515,7 +2515,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      "formParam": function(n, v){
        if (phase == 1) {
          if (!loginParamFoundName && confirm('Ist ' +v+ ' die Kartennummer?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundName = true; return [n, "$username"]; }
-         if (!loginParamFoundPass && confirm('Ist ' +v+ ' das Passwort?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundPass = true; return [n, "$password"]; }
+         if (!loginParamFoundPass && confirm('Ist ' +(v.substr(0,2) + "****************".substr(0, (v.length-2)))+ ' das Passwort?  ( * verbirgt Zeichen )\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundPass = true; return [n, "$password"]; }
                   
        }
      },
