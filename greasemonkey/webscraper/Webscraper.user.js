@@ -263,6 +263,7 @@ function activateScraper(){
 '<input id="'+prf+'optioncheckbox" type="checkbox"/> Show options<br>'+
 '<table id="'+prf+'optiontable" style="display:none">' + 
 makeinput('Included Attributes', "attribs", "id|class|name")+
+makeinput('Included Attributes (in loops)', "attribsinloops", "class")+
 makeinput('Excluded ids', "idsexcl", ".*[0-9].*|"+prf+".*")+
 makeinput('Excluded classes', "classesexcl", ".*(even|odd|select|click|hover|highlight|active|[0-9]|"+prf+").*")+
 makeinput('Excluded default tags', "tagsexcl", "tbody")+
@@ -299,7 +300,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
             var clone = document.body.cloneNode(true);
             removeScraperNodes(clone);
             fd.append("data", "<html><head><title></title></head>"+ //prefix
-                              encodeNodeTags(document.body)+ //body tag (with existing attributes)
+                              encodeNodeTags(document.body, false)+ //body tag (with existing attributes)
                               clone.innerHTML+"</body></html>");
             fd.append("output-format", "json");
             GM_xmlhttpRequest({
@@ -1272,22 +1273,22 @@ function addRangeToTemplate(range, selection){
         return;
       }
       
-      if (!fitElements(highestMatchFrom, highestMatchTo)) {
-        alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom) +" vs. "+encodeNodeTags(highestMatchTo)+"\nMake sure to select both occurences in the same way, and add mismatching attributes to the ignore lists.");
+      if (!fitElements(highestMatchFrom, highestMatchTo, true)) {
+        alert("Failed to match parents: "+encodeNodeTags(highestMatchFrom, true) +" vs. "+encodeNodeTags(highestMatchTo, true)+"\nMake sure to select both occurences in the same way, and add mismatching attributes to the ignore lists.");
         readRepetitions(null,from);
         return;
       }
       
-      var matchFromPseudoTemplate = [{nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom)}];
+      var matchFromPseudoTemplate = [{nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom, true)}];
       
-      while (highestMatchFrom.parentNode != highestMatchTo.parentNode && fitElements(highestMatchFrom.parentNode, highestMatchTo.parentNode)){
+      while (highestMatchFrom.parentNode != highestMatchTo.parentNode && fitElements(highestMatchFrom.parentNode, highestMatchTo.parentNode, true)){
         highestMatchFrom = highestMatchFrom.parentNode;
         highestMatchTo = highestMatchTo.parentNode;
-        matchFromPseudoTemplate.push({nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom)});
+        matchFromPseudoTemplate.push({nodeName: highestMatchFrom.nodeName, attributes: filterNodeAttributes(highestMatchFrom, true)});
       }
       
       if ($(highestMatchFrom.parentNode).find("#"+to.attr("id")).length == 0){
-        alert("Highest common parent: "+encodeNodeTags(highestMatchFrom)+ " doesn't contain the marked repetition.\nFailed matching: "+encodeNodeTags(highestMatchFrom.parentNode)+ " vs. "+encodeNodeTags(highestMatchTo.parentNode) );
+        alert("Highest common parent: "+encodeNodeTags(highestMatchFrom, false)+ " doesn't contain the marked repetition.\nFailed matching: "+encodeNodeTags(highestMatchFrom.parentNode, true)+ " vs. "+encodeNodeTags(highestMatchTo.parentNode, true) );
         readRepetitions(null, from);
         return;
       }
@@ -1406,18 +1407,19 @@ function addRangeToTemplate(range, selection){
 
 function updateRegexps(){
   window.attribs = new RegExp("^("+$(prfid + "attribs").val()+")$", "i");
+  window.attribsinloops = new RegExp("^("+$(prfid + "attribsinloops").val()+")$", "i");
   window.tagsexcl = new RegExp("^("+$(prfid + "tagsexcl").val()+")$", "i");
   window.idsexcl = new RegExp("^("+$(prfid + "idsexcl").val()+")$", "i");
   window.classesexcl = new RegExp("^("+$(prfid + "classesexcl").val()+")$", "i");
   window.siblingsinclmode = $(prfid+"siblings").val();
 }
 
-function filterNodeAttributes(node){
+function filterNodeAttributes(node, inloop){
   var res = {};
   var a = node.attributes;
   if (a)
     for (var i=0;i<node.attributes.length;i++)
-      if (attribs.test(a[i].name)) 
+      if ((inloop ? attribsinloops : attribs).test(a[i].name)) 
         if (a[i].name == "id") {
           if (!idsexcl.test(a[i].value)) 
             res[a[i].name] = a[i].value;
@@ -1436,9 +1438,9 @@ function objHasProperties(obj){
   return false;
 }
 
-function fitElements(t, h){ //template vs. html element
+function fitElements(t, h, inloop){ //template vs. html element
   if (t.nodeName != h.nodeName) return false;
-  return fitElementTemplate(t.nodeName, filterNodeAttributes(t), h);
+  return fitElementTemplate(t.nodeName, filterNodeAttributes(t, inloop), h);
 }
 
 function fitElementTemplate(tn, att, h){ //template node name, template attributes vs. html element
@@ -1560,10 +1562,10 @@ function encodeXMLAttributes(o) {
   return res;
 }
 
-function encodeNodeTags(node, close){
+function encodeNodeTags(node, close, inloop){
   if (!node) return "??";
   var res = "<" + node.nodeName;
-  var attr = filterNodeAttributes(node);
+  var attr = filterNodeAttributes(node, inloop);
   if (attr)
     for (var i in attr)
       if (i != "class") res += " " + i + "=\""+encodeXMLAttribute(attr[i])+"\"";
@@ -1606,7 +1608,7 @@ function regenerateTemplate(){
 
   updateRegexps();
   
-  function regenerateTemplateRec(cur){
+  function regenerateTemplateRec(cur, inloop){
     function nodeToTemplate(node) {
       if ( node.nodeType == Node.TEXT_NODE) {
         var temp = node.textContent.trim();
@@ -1622,13 +1624,16 @@ function regenerateTemplate(){
         return {
          kind: TemplateMatchNode,
          value: node.nodeName,
-         attributes: filterNodeAttributes(node),
+         attributes: filterNodeAttributes(node, inloop),
          children: [],
          templateAttributes: {}
         };
       }
       return null;
     }
+  
+    var loopElement = (cur.classList && cur.classList.contains(prf+"templateLoop"));
+    inloop = inloop || loopElement;
   
     var kids = cur.childNodes;
     var res = new Array();
@@ -1677,7 +1682,7 @@ function regenerateTemplate(){
         foundReadNow = true;
         matchChildren = $("."+prf+"read_match_children", kids[i]).is(':checked');
       } else { 
-        var x = regenerateTemplateRec(kids[i]); 
+        var x = regenerateTemplateRec(kids[i], inloop); 
         if (x.template && x.template.length > 0) {
           newTemplate = x.template;
           allOptional = allOptional && x.optional;
@@ -1754,7 +1759,7 @@ function regenerateTemplate(){
       restemplate = [{
        kind: TemplateMatchNode,
        value: cur.nodeName,
-       attributes: filterNodeAttributes(cur),
+       attributes: filterNodeAttributes(cur, inloop),
        children: restemplate,
        templateAttributes: {}
       }];
@@ -1765,7 +1770,7 @@ function regenerateTemplate(){
 
     }
     
-    if (cur.classList && cur.classList.contains(prf+"templateLoop")) {
+    if (loopElement) {
       restemplate = [{
         kind: TemplateLoop,
         value: "",
@@ -1780,7 +1785,7 @@ function regenerateTemplate(){
             optional: allOptional};
   }
   
-  var res = regenerateTemplateRec(document.body);
+  var res = regenerateTemplateRec(document.body, false);
   
   if (res.optional)
     for (var i=0;i<res.template.length;i++)
