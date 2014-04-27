@@ -2358,7 +2358,25 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         '<div style="display:block"><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="float: none; width:90%; height: 6em"></textarea><br></div>'
         );   
       $(document.body).append(lastpage);
-      var template = "<actions>\n<action id=\"connect\"></action>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">') + "\n</actions>";
+      var template = "<actions>\n<action id=\"connect\"></action>\n" + $(prfid+"multipagetemplate").val().replace("<action>", '<action id="update-all">');
+      if (template.indexOf("_renewlink") >= 0 || template.indexOf("_renewid") >= 0 ){
+        var renewAction = "<action id=\"renew-list\">\n";
+        if (template.indexOf("_renewlink") >= 0) {
+          renewAction  += '  <loop var="b" list="$renew-books">\n';
+                       +  '    <page url="{$b._renewlink}"/>\n';
+                       + '  </loop>\n';
+        } else if (template.indexOf("_renewid") >= 0) {
+          template = template.replace("</s>", "</s><s>renew-form := () </s>");
+          renewAction += '  <s>form := form-combine($renew-form, $renew-books ! x"{(.)._renewid}=on" ) </s>\n'; 
+          renewAction += '  <page url="{$form}"/>\n';
+        }
+        renewAction += "  <call action=\"update-all\"/>\n"
+                    +  "</action>";
+        
+        template += "\n" + renewAction;
+      }
+        
+      template += "\n</actions>";
       var firstRead = template.indexOf("<template>");
       if (firstRead > 0) {
         firstRead += "<template>".length;
@@ -2390,7 +2408,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
       );
       lastpage.append($("<button>", {
          "text": "Zurück",
-         "click": function(){  switchVLPhase(phase - 1); lastpage.hide(); mainInterface.show(); }
+         "click": function(){  switchVLPhase(phase - 1); lastpage[0].parentNode.removeChild(lastpage[0]); mainInterface.show(); }
        }));
        $(prfid + "_vl_upload").click(function(){
          var fd = new FormData();
@@ -2545,7 +2563,10 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
            var date = tr.textContent.trim();
            var format = guessFormat(date);
            $(tr).find(prfclass + "read_source").val("parse-date(., '"+format.replace("'", "''", "g")+"')");
+         } else if (bookFields[field] == "_renewid") {
+           $(tr).find(prfclass + "read_source").val("(@name,  if (empty($renew-form)) then $renew-form := form(./ancestor::form[1]) else ())[1]"); //hack so we get a form
          }
+         
        }
      },
      "allowAutoFollow": function(){
