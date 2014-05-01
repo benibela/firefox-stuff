@@ -347,6 +347,7 @@ makeselect('Include siblings', "siblings", ["always", "if necessary", "never"], 
                "z-index: 2147483647;"+ //maximal z-index (yes, there are pages close to this value)
                "overflow: auto;"+
                "overflow-x: hidden;"+
+               "max-width: 50%;"+
                "max-height: 95%",
         id: prf + "main"
       });
@@ -2335,11 +2336,12 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    var bookFields = ["title", "author", "id", "duedate", "status", "year", "_renewlink", "_renewid"];
    var bookFieldNames = ["Titel", "Autor", "Signatur", "Leihfristende", "Bemerkung zum Verlängerungsstatus", "Erscheinungsjahr", "Verlängerungslink", "Verlängerungscheckbox"];
    var bookFieldArticle = ["den", "den", "die", "das", "die", "das", "den", "die"];
-   var phase = GM_getValue("vl_phase", 0);
+   var phase = GM_getValue("vl_phase", 0); 
    var PHASE_FIRSTBOOKPROP = 3;
    if (phase >= PHASE_FIRSTBOOKPROP && phase < PHASE_FIRSTBOOKPROP + bookFields.length + 1) phase = 3;
    var firstField = -1;
    var firstFieldTemplateRead;
+   var checkboxIntercepted = false;
    function vlfinished(){
      var libName = GM_getValue("vl_libName", "meine Bibliothek");
      regenerateMultipageTemplate();
@@ -2391,8 +2393,8 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
       }
       url = /url="(http:\/\/[^"]+)"/.exec(template); 
       if (url) url = url[1];
-      $(prfid+"_vl_template").text(template);
-      $(prfid+"_vl_meta").text(
+      $(prfid+"_vl_template").val(template);
+      $(prfid+"_vl_meta").val(
         '<?xml version="1.0" encoding="UTF-8"?>\n'+
         '<library>\n'+
         '  <longName value="'+libName+'"/>\n'+
@@ -2403,7 +2405,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
         '  <template value="template"/>\n'+
         '</library>'       
       );
-      $(prfid+"_vl_links").text(
+      $(prfid+"_vl_links").val(
         '<html><head>\n'+
         '  <link rel="videlibri.description" href="meta.xml"/>\n'+
         '  <link rel="videlibri.template" href="template/template"/>\n'+
@@ -2417,9 +2419,9 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        }));
        $(prfid + "_vl_upload").click(function(){
          var fd = new FormData();
-         fd.append("meta", $(prfid+"_vl_meta").text());
-         fd.append("links", $(prfid+"_vl_links").text());
-         fd.append("template", $(prfid+"_vl_template").text());
+         fd.append("meta", $(prfid+"_vl_meta").val());
+         fd.append("links", $(prfid+"_vl_links").val());
+         fd.append("template", $(prfid+"_vl_template").val());
          GM_xmlhttpRequest({
            url: "http://videlibri.sourceforge.net/user/upload.php",
            data: fd, //automatically sets content-type
@@ -2503,6 +2505,25 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        vlfinished();
      }
      
+     if (phase == PHASE_FIRSTBOOKPROP && !checkboxIntercepted) {
+        checkboxIntercepted = true;
+        $('input[type=checkbox]').click(function(){
+   //     alert(firstField  + " "+phase + " " + (PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1));
+          if (firstField == -1) return;
+          if (phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1) return;
+             if (this.childNodes.length > 0) {
+               this.removeChild(this.childNodes[0]);
+               regenerateTemplate();
+               this.parentNode.style.backgroundColor = "";
+             } else {
+               var range = document.createRange();
+               range.setStartBefore(this);
+               range.setEndAfter(this);             
+               addRangeToTemplate(range);
+               this.parentNode.style.backgroundColor = "blue";
+             }
+        })
+      }    
    };
    
    var loginParamFoundName = false;
@@ -2582,23 +2603,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      }
    }
    
-   if (phase == PHASE_FIRSTBOOKPROP)
-     $('input[type=checkbox]').click(function(){
-//     alert(firstField  + " "+phase + " " + (PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1));
-       if (firstField == -1) return;
-       if (phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1) return;
-          if (this.childNodes.length > 0) {
-            this.removeChild(this.childNodes[0]);
-            regenerateTemplate();
-            this.parentNode.style.backgroundColor = "";
-          } else {
-            var range = document.createRange();
-            range.setStartBefore(this);
-            range.setEndAfter(this);             
-            addRangeToTemplate(range);
-            this.parentNode.style.backgroundColor = "blue";
-          }
-     })
+   
 }
 
  
