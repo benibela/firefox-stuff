@@ -2372,7 +2372,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
                        + '  </loop>\n';
         } else if (template.indexOf("_renewid") >= 0) {
           template = template.replace("</s>", "</s><s>renew-form := () </s>");
-          renewAction += '  <s>form := form-combine($renew-form, $renew-books ! x"{(.)._renewid}=on" ) </s>\n'; 
+          renewAction += '  <s>form := form-combine($renew-form, $renew-books ! {(.)._renewid: "on"} ) </s>\n'; 
           renewAction += '  <page url="{$form}"/>\n';
         }
         renewAction += "  <call action=\"update-all\"/>\n"
@@ -2583,6 +2583,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    
    if (phase == PHASE_FIRSTBOOKPROP)
      $('input[type=checkbox]').click(function(){
+//     alert(firstField  + " "+phase + " " + (PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1));
        if (firstField == -1) return;
        if (phase != PHASE_FIRSTBOOKPROP + bookFieldNames.length - 1 + 1) return;
           if (this.childNodes.length > 0) {
