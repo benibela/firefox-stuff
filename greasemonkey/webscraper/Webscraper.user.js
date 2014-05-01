@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Videlibri-Script
+// @name        Videlibri-Skript
 // @namespace   http://www.benibela.de
 // @include     *
 // @version     8
@@ -10,7 +10,9 @@
 // @grant       GM_info
 // ==/UserScript==
 
+
 // @name        Webscraper / Xidelscript
+
 
 /***************************************************************************
  *   copyright       : (C) 2012-2014 Benito van der Zander                 *
