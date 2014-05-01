@@ -685,7 +685,7 @@ function toggleMultipageScraping(){
             n = '"' +n.replace('"', '""', "g")+'"';
             v = '"' +v.replace('"', '""', "g")+'"';
             if (interceptor.formParam) {
-              var inter = interceptor.formParam(n, v);
+              var inter = interceptor.formParam(n, v, e);
               if (inter) { n = inter[0]; v = inter[1]; }
             }
             an.push(n);
@@ -2535,8 +2535,9 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
        switchVLPhase(0);
        multipageClearAll();
      },
-     "formParam": function(n, v){
+     "formParam": function(n, v, e){
        if (phase == 1) {
+         if (e && e.getAttribute("type") && e.getAttribute("type").toLowerCase() == "hidden") return;
          if (!loginParamFoundName && confirm('Ist ' +v+ ' die Kartennummer?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundName = true; return [n, "$username"]; }
          if (!loginParamFoundPass && confirm('Ist ' +(v.substr(0,2) + "****************".substr(0, (v.length-2)))+ ' das Passwort?  ( * verbirgt Zeichen )\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundPass = true; return [n, "$password"]; }
                   
