@@ -2,7 +2,7 @@
 // @name        Videlibri-Script
 // @namespace   http://www.benibela.de
 // @include     *
-// @version     7
+// @version     8
 // @require  http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js
 // @grant       GM_getValue
 // @grant       GM_setValue
