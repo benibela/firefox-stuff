@@ -14,6 +14,16 @@ function initbbutils(){
    function waitFor(selector, cont) {
       setTimeout(function(){waitForDirect(selector, cont)}, Math.random()*500+250);
    }
+   function waitForChain(args){
+     function waitForChainRec(p) {
+       if (p >= args.length) return;
+       waitFor(args[p], function(x){
+         args[p+1](x);
+         waitForChainRec(p+2);
+       });
+     }
+     waitForChainRec(0);
+   }
    function getOffset( el ) {
        var _x = 0;
        var _y = 0;
@@ -30,12 +40,31 @@ function initbbutils(){
      String.prototype.contains = function(v){return this.indexOf(v) >= 0;};
    
      function mkislandbtn(time){return '<a href="javascript:claimisland('+time+')">'+time+"m </a>";}
-     $("div.ui_quickbar").append('<div id="bbscript" style="padding-left: 2em">Bauern: '+mkislandbtn(5)+mkislandbtn(90)+mkislandbtn(480)+'</div>');
+     $("div.ui_quickbar").append('<div id="bbscript" style="padding-left: 2em">Bauern: '+mkislandbtn(5)+mkislandbtn(20)+mkislandbtn(90)+mkislandbtn(480)+'<input id="bbpeasantlocal" type="checkbox"/> lokal</div>');
      $("div.ui_quickbar").css({"text-align": "left", "color": "white"});
      
      window.claimisland = function(time) { 
+       //if ($("#activetown").length == 0) 
+         $("div.btn_jump_to_town.jump_to_town").click();
+       setTimeout(function(){waitFor("#activetown", function(){claimislandPrivate(time, $(".town_name")[0].textContent);})}, 750);
+     }
+     window.claimislandPrivate = function(time, endisland) { 
        var peasants = $(".farmtown_owned_on_same_island span.res_available").parent().children("a");
-       var t = peasants[0];
+       if (peasants.length == 0) {
+         if ($("#bbpeasantlocal")[0].checked) return;
+         $(".btn_next_town").click();
+         setTimeout(function(){
+           if ($(".town_name")[0].textContent == endisland) return;
+           //alert($(".town_name")[0].textContent +"=="+ endisland);
+           $("div.btn_jump_to_town.jump_to_town").click();
+           setTimeout(function(){
+             claimislandPrivate(time, endisland);
+           }, 1500);
+         }, 1000);         
+         return;
+       }
+       if ($(".limit_reached").length > 0) { alert("full!"); return; }
+       var t = peasants[Math.floor(Math.random()*peasants.length)];
        var off = getOffset(t);
        var x = off.left;
        var y = off.top;
@@ -43,19 +72,27 @@ function initbbutils(){
        WMap.handlerDown({"target": t, clientX: x, clientY: y});
        WMap.handlerUp({"target": t, clientX: x, clientY: y});
        
-       waitFor("#claim_info", function(claim){
+       var pillage = $(".forced_loyalty").length > 0;
+       
+       waitForChain([ pillage ? "#pillage_info" : "#claim_info", function(claim){
          claim.mousedown();
          claim.mouseup();
-         waitFor(".farm_claim", function(claims){
-           time = time+":00";
-           for (var i=0;i<claims.length;i++){
-             if (claims[i].textContent.contains(time)) {
-               $(claims[i]).children("a.farm_claim_button").click();
-               return;
+       }, 
+       ".farm_claim", function(claims){
+           function finalClaim(xtime) {
+             for (var i=0;i<claims.length;i++){
+               if (claims[i].textContent.contains(xtime)) {
+                 $(claims[i]).children("a.farm_claim_button").click();
+                 return true;
+               }
              }
+             return false;
            }
-         });
-       });
+           if (!finalClaim(time+":00"))
+             finalClaim("240:00");
+       },
+       "html", function(){ claimislandPrivate(time, endisland); }
+       ]);
      }   
    });
    
