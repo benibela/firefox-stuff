@@ -2,7 +2,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/../../../manageUtils.sh
 
-githubProject firefox-stuff
+mirroredProject firefox-stuff
 
 BASE=$HGROOT/programs/internet/firefoxgreasemonkey
 
