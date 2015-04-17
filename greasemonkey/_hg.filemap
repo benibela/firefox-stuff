@@ -1,7 +1,8 @@
 include programs/internet/firefoxgreasemonkey
 exclude programs/internet/firefoxgreasemonkey/dreamworld
 exclude programs/internet/firefoxgreasemonkey/dreamworldwrap
-exclude programs/internet/firefoxgreasemonkey/tyrantbot
+include programs/internet/firefoxgreasemonkey/tyrantbot
+exclude programs/internet/firefoxgreasemonkey/tyrantbot/notes.js
 rename programs/internet/firefoxgreasemonkey greasemonkey
 rename programs/internet/firefoxgreasemonkey/README.md README.md
 include programs/internet/firefoxthings
