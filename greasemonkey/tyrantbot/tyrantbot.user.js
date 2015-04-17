@@ -2755,8 +2755,8 @@ function visualizeBattle(){
       var unimportantSkills = new Array("weaken", "rally", "swipe", "jam", "evade", "mimic", "protect", "enfeeble", "berserk", "invigorate", "summon", "pierce_p", "fear", "valor", "immobilize", "cleanse", "chaos", "tribute", "burst", "augment", "emulate", "blitz", "pierce", "stun", 
        "intercept", "rush", "split",//?
                                         "freeze",  //TODO: freeze prevents unit tick down
-                                        "poison", "sunder", "phase"
-                                        //todo: poison
+                                        "poison", "sunder", "phase", "disease"
+                                        //todo: disease
       );
       var targetHealChange = 0;
       if (attackSkills.contains(acts[i].skill_id)) targetHealChange = - acts[i].value;
