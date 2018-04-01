@@ -13,6 +13,12 @@
 
 // @name        Webscraper / Xidelscript
 
+if (GM && GM.info && !(/^[0-3]\./.test(GM.info.version))) {
+  alert(GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0 ? 
+        " Das Skript benötigt Greasemonkey 3, nicht Greasemonkey 4." : 
+        " This script requires Greasemonkey 3. It will not work properly on Greasemonkey 4");
+}
+
 
 /***************************************************************************
  *   copyright       : (C) 2012-2014 Benito van der Zander                 *
