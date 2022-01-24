@@ -13,13 +13,6 @@
 
 // @name        Webscraper / Xidelscript
 
-if (GM && GM.info && !(/^[0-3]\./.test(GM.info.version))) {
-  alert(GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0 ? 
-        " Das Skript benötigt Greasemonkey 3, nicht Greasemonkey 4." : 
-        " This script requires Greasemonkey 3. It will not work properly on Greasemonkey 4");
-}
-
-
 /***************************************************************************
  *   copyright       : (C) 2012-2014 Benito van der Zander                 *
  *                              (except the library directly below)        *
@@ -2364,10 +2357,10 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
                "z-index: 2147483647;"+ //maximal z-index (yes, there are pages close to this value)
                "overflow: auto;",
         id: prf + "vl_main"
-      }).append('<h1>VideLibri-Skript</h1><p>Das Kontozugriffs-Template wurde erstellt und muss nun nur noch in VideLibri eingetragen werden. In der Desktop-Version, kann dies direkt in dem Einstellungsdialog erfolgen, bei der Android-Version ist der Screen zu klein dafür, so dass es irgendwo hochgeladen, und in VideLibri wieder runtergeladen werden muss. Zum Runterladen, öffnet man den Einstellungsdialog der App, klickt auf den Button "Neue Bibliothek registrieren", gibt im neuen Dialog die URL im obersten Feld ein und klickt auf "installieren".  Zudem kann ein hochgeladene Template kann auch von der Desktop-Version runtergeladen werden.'+ 
-        '<p>Zum Hochladen auf die VideLibri-Sourceforge-Seite klicke diesen Button: <button id="'+prf+'_vl_upload">auf SF hochladen</button>. Die URL wird anschließend hier angezeigt: <div style="color:red; font-weight: bold" id="'+prf+'_vl_result"></div>'+
-        '<p>Es werden nur die drei unten angezeigten Dateien hochgeladen. Es macht Sinn diese vor dem Hochladen nochmal anzusehen, ob sie keine persönlichen Daten enthalten. (Kontonummer und Passwort sollten durch die $username und $password Platzhalter ersetzt worden sein) '+
-        '<p>Wer es auf einen eigenen Server hochladen will, muss diese Dateien dort hochladen, wobei die URL zu <code>bib.html</code> dann in VideLibri eingegeben werden muss:'+
+      }).append('<h1>VideLibri-Skript</h1><p>The account access template has been created and now only needs to be entered in VideLibri. In the desktop version, this can be done directly in the settings dialog, in the Android version the screen is too small for it, so it has to be uploaded somewhere and then downloaded again in VideLibri. To download, open the settings dialog of the app, click on the "Register new library" button, enter the URL in the top field in the new dialog and click on "install". In addition, an uploaded template can also be downloaded from the desktop version.'+ 
+        '<p>To upload to the VideLibri Sourceforge page, click this button: <button id="'+prf+'_vl_upload">upload to SF</button>. The URL is then displayed here: <div style="color:red; font-weight: bold" id="'+prf+'_vl_result"></div>'+
+        '<p>Only the three files shown below will be uploaded. It makes sense to look at them again before uploading them to make sure they do not contain any personal data. (Account number and password should go through the $username and $password Placeholder has been replaced) '+
+        '<p>If you want to upload it to your own server, you have to upload these files there, with the URL to <code>bib.html</code> then must be entered in VideLibri:'+
         '<div style="display:block"><code>template/template</code>:<br> <textarea id="'+prf+'_vl_template" style="float: none; width:90%; height: 10em"></textarea><br></div>'+
         '<div style="display:block"><code>meta.xml</code>:<br> <textarea id="'+prf+'_vl_meta" style="float: none; width:90%; height: 6em"></textarea><br></div>'+
         '<div style="display:block"><code>bib.html</code>:<br> <textarea id="'+prf+'_vl_links" style="float: none; width:90%; height: 6em"></textarea><br></div>'
@@ -2437,8 +2430,8 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
            onload: function(response){
              $(prfid + "_vl_result").html(response.responseText);
            },
-           onerror: function(){ alert("Hochladen fehlgeschlagen!!!"); },
-           onabort: function(){ alert("Hochladen fehlgeschlagen!!!"); }
+           onerror: function(){ alert("Upload failed!!!"); },
+           onabort: function(){ alert("Upload failed!!!"); }
          });
        });
    }
@@ -2452,48 +2445,48 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      var e = document.getElementById(prf+"_vl_base");
      var ct = "";
      switch (p) {
-       case 0: ct = "<b>Erstellung eines einfachen Konto-Template<br><br>"+
-                    "Es müssen mindestens zwei Ausleihen vorhanden sein. <br><br>"+
-                    "<span style='color: red'>Folge den normalen Links durch den Bibliothekkatalog, bis zur Anmelde-Seite für den Kontozugriff</span>. (noch nicht anmelden)<br>"+
-                    'Dann auf "Weiter" klicken.<br><br>(manchmal wird das Skript zu früh aktiviert, weil dies noch nicht die Katalogseite ist oder das Skript jetzt die Links blockiert. In dem Fall dieses kleine (!) Fenster mit dem X schließen, F5 drücken und den roten Button erst später klicken)'; break;
-       case 1: ct = 'Auf der Anmeldeseite nun normal Kartennummer und Passwort eingeben. <br><br><i>Nach</i> dem Einloggen die Fragen beantworten und auf "Weiter" klicken.<br>(Zum Einloggen ist es besser den grafischen Button zu klicken als Enter)'; break;
-       case 2: ct = 'Folge den normalen Links durch den Bibliothekskatalog, bis die Liste der Ausleihen angezeigt wird. Dann auf "Weiter" klicken.'; break;
+       case 0: ct = "<b>Creation of a simple account template<br><br>"+
+                    "There must be at least two loans<br><br>"+
+                    "<span style='color: red'>Follow the normal links through the library catalog to the login page for account access</span>. (Do not register yet)<br>"+
+                    'Then click on "Next".<br><br>(Sometimes the script is activated too early because this is not the catalog page yet or the script is now blocking the links. In this case, close this small (!) Window with the X, press F5 and click the red button later)'; break;
+       case 1: ct = 'Now enter your card number and password normally on the login page.<br><br><i>Nach</i> Answer the questions after logging in and click "Next".<br>(To log in, it is better to click the graphic button than Enter)'; break;
+       case 2: ct = 'Follow the normal links through the library catalog until the list of loans is displayed. Then click on "Next".'; break;
      };
      if (p >= 3 && p < 3 + bookFieldNames.length + 1) {
         var loopRead = $(prfclass + "templateLoop").length > 0;
        if (loopRead || firstField == -1 || !firstFieldTemplateRead) {
          var q = (loopRead ? p - 1 : p) - 3;
          if (q < 0) 
-           ct = 'Wurde "Zurück" gedrückt? Dann wird dieser Schritt übersprungen, solange grüne markierte Zeilen vorhanden sind.';
+           ct = 'Was "Back" pressed? Then this step is skipped as long as there are green marked lines.';
          else if (q < bookFieldNames.length - 2) 
-           ct = 'Markiere <span style="color:blue">'+bookFieldArticle[q]+' '+bookFieldNames[q]+'</span> der ersten Ausleihe. Anschließend, oder wenn dieser Bibliothekkatalog kein "' + bookFieldNames[q]+ '"-Feld hat, auf "Weiter" klicken.<br><br><span style="font-size: 75%">(am einfachsten lässt es sich meistens mit schnellem Doppelklicken markieren. Wenn etwas falsch markiert wurde, z.B.: nur ein Teil vom Feld lässt es sich durch nochmaliges Anklicken wieder entfernen)</span>';
+           ct = 'Mark<span style="color:blue">'+bookFieldArticle[q]+' '+bookFieldNames[q]+'</span> the first loan. Then, or if this library catalog does not have a"' + bookFieldNames[q]+ '"-Field, click on "Next".<br><br><span style="font-size: 75%">(The easiest way to highlight it is usually to quickly double-click it. If something has been marked incorrectly, e.g. only a part of the field can be removed by clicking again)</span>';
          else if (q < bookFieldNames.length) {
            var link = q == bookFieldNames.length - 2;
-           ct = "Wenn ein Template mit Verlängerungsmöglichkeit erstellt werden soll, und "+(link ? "es in jeder Zeile einen Link zum Verlängern eines einzelnen Buches gibt, klicke auf den Verlängerungslink des ersten Buches und danach auf 'Weiter'." : 'es in jeder Zeile eine Checkbox gibt, mit der sich ein Buch zum Verlängern markieren gibt, klicke auf diese Checkbox und dann auf "Weiter". ')+'<br><br>Wenn es das nicht gibt, einfach so auf "Weiter klicken".';
+           ct = "If a template is to be created with the option of renewal, and "+(link ? "there is a link in every line to extend an individual book, click on the extension link for the first book and then on 'Next'. ": 'There is a checkbox in every line to mark a book for extension, click on this checkbox and then on "Next".')+'<br><br>If that doesn't exist, just click on "Next".';
          } else
-           ct = "Keine Bucheigenschaften markiert! So geht es nicht.";
+           ct = "No book properties marked! That's not how it works.";
         } else { 
-          ct = 'Markiere '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' der <span style="color:blue"> zweiten Ausleihe</span>. <br> Wenn alle Ausleihen blau/grün markiert sind, auf "Weiter" klicken. <br><br>Wenn sie nicht grün werden, nochmal versuchen, bis es klappt. (ansonsten geht das Skript hier nicht richtig. Vielleicht nochmal ganz von vorne versuchen (schließen, f5). "weiter" ginge auch, aber dann zeigt VideLibri nur das erste Buch an. ).'
+          ct = 'Mark '+bookFieldArticle[firstField]+' '+bookFieldNames[firstField]+' the <span style="color:blue"> second loan</span>. <br> When all loans are marked blue / green, click on "Next". <br><br>If they don't turn green, try again until you get it. (Otherwise the script doesn't work properly here. Maybe try again from the beginning (close, f5). "continue" would also work, but then VideLibri only shows the first book.).'
           
           $(firstFieldTemplateRead).find(prfclass + "btnloop")[0].click();
         }
      } else if (p == 3 + bookFieldNames.length + 1) {
-       ct = 'Gebe den Namen der Bibliothek ein <input value="'+GM_getValue("vl_libName", "meine Bibliothek")+'" id="'+prf+'_vlname"/> und klicke auf "Weiter".';
+       ct = 'Enter the name of the library <input value="'+GM_getValue("vl_libName", "meine Bibliothek")+'" id="'+prf+'_vlname"/> and click on "Next".';
      } else if (p == 3 + bookFieldNames.length + 1 + 1) {
-       ct = "fertig";
+       ct = "finished";
      }    
      
      e.innerHTML = ct + "<br><br>";
      $(e).append($("<button>", {
-       "text": "Weiter...",
+       "text": "Forward...",
        "click": function(){  switchVLPhase(phase + 1); }
      }));
      $(e).append("<br><br><br><br><br>");
      $(e).append($("<button>", {
-      "text": "Zurück",
+      "text": "Back",
       "click": function(){  switchVLPhase(phase - 1); }
       }));
-     $(e).append("(nur für Notfälle)");
+     $(e).append("(only for emergencies)");
      
      if (phase == 3) {
        firstField = -1;
@@ -2539,7 +2532,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
    
    interceptor = {
      "init_afterbtn": function(){
-       $(prfid + "activation").append("<div><br><br><br>Öffne den Bibliothekkatalog und klicke dann diesen Button</div>");
+       $(prfid + "activation").append("<div><br><br><br>Open the library catalog, then click this button</div>");
        if (!localStorage[prf+"_deactivated"]) 
          localStorage[prf+"_deactivated"] = "true";
      },
@@ -2549,7 +2542,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
          '<div><b>VideLibri-Skript: </b>' +
          '<div id="'+prf+'_vl_base">'+
          '</div>' +
-         '<div style="margin-top: 400px">"Experten"-Konfiguration:<br><br></div></div>'
+         '<div style="margin-top: 400px">"Expert" configuration:<br><br></div></div>'
        );
        switchVLPhase(phase);
      },
@@ -2567,8 +2560,8 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
      "formParam": function(n, v, e){
        if (phase == 1) {
          if (e && e.getAttribute("type") && e.getAttribute("type").toLowerCase() == "hidden") return;
-         if (!loginParamFoundName && confirm('Ist ' +v+ ' die Kartennummer?\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundName = true; return [n, "$username"]; }
-         if (!loginParamFoundPass && confirm('Ist ' +(v.substr(0,2) + "****************".substr(0, (v.length-2)))+ ' das Passwort?  ( * verbirgt Zeichen )\n\n(Das Skript muss Nummer und Passwort kennen, damit es sie aus dem Template löschen kann.)')) { loginParamFoundPass = true; return [n, "$password"]; }
+         if (!loginParamFoundName && confirm('Is ' +v+ ' the card number?\n\n(The script needs to know the number and password so that it can delete them from the template.)')) { loginParamFoundName = true; return [n, "$username"]; }
+         if (!loginParamFoundPass && confirm('Is ' +(v.substr(0,2) + "****************".substr(0, (v.length-2)))+ ' the password? ( * hides signs)\n\n(The script needs to know the number and password so that it can delete them from the template.)')) { loginParamFoundPass = true; return [n, "$password"]; }
                   
        }
      },
@@ -2593,7 +2586,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
              var temp = /^[0-9]{1,2}([^0-9])[a-zA-ZäöüÄÖÜ]{3}([^0-9])[0-9]{1,4}/.exec(date);
              if (temp) return "d" + temp[1] + "mmm" + temp[2]+ "yyyy";
              
-             return prompt("Konnte das Datumsformat von "+date+' nicht erkennen. Bitte gebe es mit folgender Notation ein\n d = Tag, m = Monat, y = Jahr.\nZ.B.: Datumsformat für "2 Dezember-14" ist "d mmmm-yy" oder für "13-01-01" wäre es "yy-mm-dd" (ohne " eingeben) ');
+             return prompt("Could the date format from "+date+' not seen. Please enter it with the following notation\n d = Tag, m = Monat, y = Jahr.\nE.g .: the date format for "2 December-14" is "d mmmm-yy" or for "13-01-01" it would be "yy-mm-dd" (enter without ") ');
            }
            var date = tr.textContent.trim();
            var format = guessFormat(date);
@@ -2630,7 +2623,7 @@ if (GM_info.script.name.toLowerCase().indexOf("videlibri") >= 0) {
   
   
 $("<div/>",{
-  text: tr("Activate Scraping", "Aktivieren"),
+  text: tr("Activate Scraping", "Activate"),
   style: "position: fixed;" +
          "right: 10px; top: 10px; " +
          "border: 2px solid red; " +
